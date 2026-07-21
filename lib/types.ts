@@ -23,9 +23,9 @@ export interface Poll {
   type: PollType;
   options: PollOption[];
   status: PollStatus;
-  createdAt: Timestamp | Date | null;
-  expiresAt?: Timestamp | Date | null;
-  closedAt?: Timestamp | Date | null;
+  createdAt: any;
+  expiresAt?: any;
+  closedAt?: any;
   totalVotes: number;
 }
 
@@ -36,7 +36,7 @@ export interface Vote {
   isAnonymous: boolean;
   choices: string[];
   rankings?: Record<string, number>;
-  castedAt: Timestamp | Date | null;
+  castedAt: any;
 }
 
 export interface MyPollEntry {
