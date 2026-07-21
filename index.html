@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoteSpace — Vote on Anything with Friends</title>
+  <meta name="description" content="Create polls on any topic, share with friends, and see live results. The friendliest way to decide together." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+
+  <!-- Firebase SDK (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- Animated background orbs -->
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <a href="index.html" class="nav-brand" aria-label="VoteSpace home">
+      <span class="logo-icon">🗳️</span>
+      <span class="logo-text">VoteSpace</span>
+    </a>
+    <div class="nav-actions">
+      <a href="create.html" class="btn btn-gradient btn-sm" id="nav-create-btn">+ Create Poll</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero page-top" aria-label="Hero section">
+    <div class="hero-badge animate-fade-in">✨ Vote on anything, instantly</div>
+
+    <h1 class="animate-slide-up delay-100">
+      The <span class="gradient-text">friendliest</span> way<br/>to decide together
+    </h1>
+
+    <p class="hero-subtitle animate-slide-up delay-200">
+      Create a poll on any topic, share the code with your crew,<br/>and find out what everyone really thinks — in real time.
+    </p>
+
+    <!-- Join with code card -->
+    <div class="join-card animate-slide-up delay-300" role="region" aria-label="Join a poll">
+      <p class="font-semibold text-sm uppercase" style="color:var(--text-secondary);letter-spacing:0.08em;">Enter a poll code</p>
+      <div class="join-input-row">
+        <input
+          type="text"
+          id="join-code-input"
+          class="join-input"
+          placeholder="ABC123"
+          maxlength="6"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Poll code"
+        />
+        <button id="join-btn" class="btn btn-gradient" aria-label="Join poll">Join →</button>
+      </div>
+      <p class="join-hint">
+        Don't have a code? <a href="create.html">Create your own poll</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- MY POLLS SECTION -->
+  <section class="section page-body" id="my-polls-section" aria-label="My polls">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">🗂️ My Polls</h2>
+        <a href="create.html" class="btn btn-glass btn-sm">+ New Poll</a>
+      </div>
+
+      <!-- Skeleton while loading -->
+      <div class="polls-grid" id="polls-grid" aria-live="polite">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES ROW -->
+  <section style="padding:var(--s8) 0 var(--s20);">
+    <div class="container">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--s5);" class="stagger">
+        <div class="card text-center" style="padding:var(--s8) var(--s5);">
+          <div style="font-size:2rem;margin-bottom:var(--s4);">⚡</div>
+          <h4 style="margin-bottom:var(--s2);">4 Poll Types</h4>
+          <p class="text-sm">Single, Multiple, Ranked, or Yes/No — your call.</p>
+        </div>
+        <div class="card text-center" style="padding:var(--s8) var(--s5);">
+          <div style="font-size:2rem;margin-bottom:var(--s4);">🔗</div>
+          <h4 style="margin-bottom:var(--s2);">Share Instantly</h4>
+          <p class="text-sm">Share a 6-char code or a direct link — no accounts needed.</p>
+        </div>
+        <div class="card text-center" style="padding:var(--s8) var(--s5);">
+          <div style="font-size:2rem;margin-bottom:var(--s4);">🎭</div>
+          <h4 style="margin-bottom:var(--s2);">Anonymous or Named</h4>
+          <p class="text-sm">Each voter decides — skip the name field to stay anonymous.</p>
+        </div>
+        <div class="card text-center" style="padding:var(--s8) var(--s5);">
+          <div style="font-size:2rem;margin-bottom:var(--s4);">📊</div>
+          <h4 style="margin-bottom:var(--s2);">Live Results</h4>
+          <p class="text-sm">Animated charts reveal the outcome the moment you close a poll.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer" role="contentinfo">
+    Made with 💜 using VoteSpace &nbsp;·&nbsp; <a href="create.html">Start a poll</a>
+  </footer>
+</div><!-- .page -->
+
+<!-- JS -->
+<script src="js/firebase-config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/store.js"></script>
+<script src="js/polls.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  // ---- Join poll by code ----
+  const joinInput = document.getElementById('join-code-input');
+  const joinBtn   = document.getElementById('join-btn');
+
+  function joinPoll() {
+    const code = App.normaliseCode(joinInput.value);
+    if (code.length < 6) { UI.toast('Please enter a 6-character poll code', 'warning'); return; }
+    App.go('vote.html', { code });
+  }
+
+  joinBtn.addEventListener('click', joinPoll);
+  joinInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinPoll(); });
+  joinInput.addEventListener('input', e => {
+    e.target.value = App.normaliseCode(e.target.value);
+  });
+
+  // ---- Load my polls from localStorage → Firebase ----
+  const grid = document.getElementById('polls-grid');
+  const myList = Store.getMyPollsList();
+
+  if (myList.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-icon">🗳️</div>
+        <p class="empty-title">No polls yet</p>
+        <p class="empty-desc">Create your first poll and invite friends to vote!</p>
+        <a href="create.html" class="btn btn-gradient mt-4">Create a Poll</a>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = ''; // clear skeletons
+
+  // Fetch each poll from Firebase concurrently
+  const fetched = await Promise.allSettled(
+    myList.map(p => Store.getPollById(p.id))
+  );
+
+  let hasAny = false;
+  fetched.forEach((result, i) => {
+    const poll = result.status === 'fulfilled' ? result.value : null;
+    if (!poll) return;
+    hasAny = true;
+
+    const { text: statusText, cls: statusCls } = Polls.statusBadge(poll);
+    const typeInfo = Polls.TYPES[poll.type] || {};
+    const timeLeft = Polls.isClosed(poll) ? null : UI.timeLeft(poll.expiresAt);
+
+    const card = document.createElement('a');
+    card.href = Polls.isClosed(poll)
+      ? App.buildUrl('results.html', { code: poll.code })
+      : App.buildUrl('vote.html',   { code: poll.code });
+    card.className = 'poll-card hover-lift animate-slide-up';
+    card.style.animationDelay = `${i * 60}ms`;
+    card.setAttribute('aria-label', `Poll: ${poll.title}`);
+    card.innerHTML = `
+      <div class="poll-card-header">
+        <span class="poll-card-title">${Results._escHtml ? Results._escHtml(poll.title) : poll.title}</span>
+        <span class="badge ${statusCls}">${statusText}</span>
+      </div>
+      <div class="poll-card-meta">
+        <span>${typeInfo.icon || ''} ${typeInfo.label || poll.type}</span>
+        <span>·</span>
+        <span>${poll.totalVotes || 0} vote${poll.totalVotes !== 1 ? 's' : ''}</span>
+        ${timeLeft ? `<span>·</span><span style="color:var(--amber)">⏱ ${timeLeft}</span>` : ''}
+      </div>
+      <div class="flex-between mt-2">
+        <span class="poll-code-chip">${poll.code}</span>
+        <span class="text-xs text-muted">${UI.timeAgo(poll.createdAt)}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  if (!hasAny) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-icon">🔍</div>
+        <p class="empty-title">Couldn't load polls</p>
+        <p class="empty-desc">Make sure Firebase is configured and you're connected.</p>
+      </div>
+    `;
+  }
+})();
+</script>
+</body>
+</html>

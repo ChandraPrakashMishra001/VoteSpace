@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create a Poll — VoteSpace</title>
+  <meta name="description" content="Create a poll on any topic in seconds. Choose Single, Multiple, Ranked, or Yes/No — then share the code with friends." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    .wizard-panel { display:none; }
+    .wizard-panel.active { display:block; animation:step-enter 0.35s var(--t-slow) both; }
+    .wizard-card {
+      background:var(--glass-bg);
+      border:1px solid var(--glass-border);
+      border-radius:var(--r-2xl);
+      backdrop-filter:blur(20px);
+      padding:var(--s8);
+      max-width:640px; margin:0 auto;
+    }
+    .wizard-nav {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-top:var(--s6); gap:var(--s3);
+    }
+    .step-title { font-family:var(--font-heading); font-size:1.5rem; font-weight:700; margin-bottom:var(--s2); }
+    .step-sub   { color:var(--text-secondary); margin-bottom:var(--s6); font-size:0.9rem; }
+    .share-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--s4); }
+    @media(max-width:480px){ .share-grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <span class="logo-icon">🗳️</span>
+      <span class="logo-text">VoteSpace</span>
+    </a>
+    <div class="nav-actions">
+      <a href="index.html" class="btn btn-glass btn-sm">← Back</a>
+    </div>
+  </nav>
+
+  <main class="page-top page-body">
+    <div class="container-sm">
+      <div class="text-center mb-8 animate-fade-in">
+        <h1 style="font-size:clamp(1.8rem,4vw,2.5rem);">Create a Poll</h1>
+        <p class="text-secondary mt-2">Fill in the details and share with your friends.</p>
+      </div>
+
+      <!-- STEP INDICATOR -->
+      <div class="steps animate-slide-down" id="steps-indicator" role="list" aria-label="Wizard steps">
+        <!-- Steps injected by JS -->
+      </div>
+
+      <!-- WIZARD PANELS -->
+      <div class="wizard-card animate-slide-up delay-200">
+
+        <!-- STEP 1: Title & Description -->
+        <div class="wizard-panel active" id="panel-1">
+          <p class="step-title">📝 The Topic</p>
+          <p class="step-sub">What do you want your friends to decide?</p>
+          <div class="flex-col gap-6">
+            <div class="form-group">
+              <label class="form-label" for="poll-title">Poll Title <span style="color:var(--red)">*</span></label>
+              <input type="text" id="poll-title" class="form-input" placeholder="e.g. Best pizza topping for Friday?" maxlength="200" autocomplete="off" />
+              <div class="flex-between">
+                <span class="form-hint">Keep it clear and fun.</span>
+                <span class="char-count" id="title-count">0/200</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="poll-desc">Description <span class="text-muted">(optional)</span></label>
+              <textarea id="poll-desc" class="form-input form-textarea" placeholder="Add some context for your friends…" maxlength="500"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="creator-name">Your Name <span class="text-muted">(optional)</span></label>
+              <input type="text" id="creator-name" class="form-input" placeholder="Leave blank to be anonymous" maxlength="60" autocomplete="name" />
+            </div>
+          </div>
+          <div class="wizard-nav">
+            <span></span>
+            <button class="btn btn-gradient" id="step1-next">Next →</button>
+          </div>
+        </div>
+
+        <!-- STEP 2: Poll Type -->
+        <div class="wizard-panel" id="panel-2">
+          <p class="step-title">🎯 Poll Type</p>
+          <p class="step-sub">How should friends cast their vote?</p>
+          <div class="type-grid" id="type-grid">
+            <!-- injected by JS -->
+          </div>
+          <div class="wizard-nav">
+            <button class="btn btn-glass" id="step2-back">← Back</button>
+            <button class="btn btn-gradient" id="step2-next">Next →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Options -->
+        <div class="wizard-panel" id="panel-3">
+          <p class="step-title">🔢 Options</p>
+          <p class="step-sub" id="options-sub">Add the choices your friends can pick from.</p>
+          <div id="yesno-notice" class="hidden">
+            <div class="card" style="background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.2);text-align:center;padding:var(--s6);">
+              <div style="font-size:2rem;margin-bottom:var(--s3);">👍 👎</div>
+              <p class="text-secondary text-sm">Yes / No options are automatic — no need to add anything.</p>
+            </div>
+          </div>
+          <div id="options-container">
+            <div class="options-list" id="options-list">
+              <!-- rows injected by JS -->
+            </div>
+            <button class="add-option-btn mt-4" id="add-option-btn">
+              <span>+</span> Add another option
+            </button>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn btn-glass" id="step3-back">← Back</button>
+            <button class="btn btn-gradient" id="step3-next">Next →</button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Settings -->
+        <div class="wizard-panel" id="panel-4">
+          <p class="step-title">⚙️ Settings</p>
+          <p class="step-sub">Fine-tune how the poll behaves.</p>
+          <div class="flex-col gap-6">
+            <div class="form-group">
+              <label class="form-label">Poll Duration</label>
+              <div class="timer-pills" id="timer-pills">
+                <button class="timer-pill selected" data-hours="0">No timer</button>
+                <button class="timer-pill" data-hours="1">1 hour</button>
+                <button class="timer-pill" data-hours="6">6 hours</button>
+                <button class="timer-pill" data-hours="24">24 hours</button>
+                <button class="timer-pill" data-hours="48">2 days</button>
+                <button class="timer-pill" data-hours="168">1 week</button>
+              </div>
+              <p class="form-hint mt-2">After the timer, the poll auto-closes and results are revealed.</p>
+            </div>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn btn-glass" id="step4-back">← Back</button>
+            <button class="btn btn-gradient" id="step4-create">
+              <span>🚀 Create Poll</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 5: Share! -->
+        <div class="wizard-panel" id="panel-5">
+          <div class="text-center mb-6">
+            <div style="font-size:3.5rem;margin-bottom:var(--s4);animation:bounce-in 0.5s var(--t-slow);">🎉</div>
+            <p class="step-title">Your Poll is Live!</p>
+            <p class="step-sub">Share the code or link with your friends.</p>
+          </div>
+
+          <!-- Poll Code -->
+          <div class="form-group mb-6">
+            <label class="form-label">Poll Code</label>
+            <div class="poll-code-box">
+              <span class="poll-code-value" id="share-code">------</span>
+              <button class="copy-btn" id="copy-code-btn">Copy</button>
+            </div>
+          </div>
+
+          <!-- Share links -->
+          <div class="share-grid mb-6">
+            <div class="form-group">
+              <label class="form-label">Vote Link</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="vote-link" class="form-input text-xs font-mono" readonly style="flex:1;" />
+                <button class="copy-btn" id="copy-vote-link">Copy</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Results Link</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="results-link" class="form-input text-xs font-mono" readonly style="flex:1;" />
+                <button class="copy-btn" id="copy-results-link">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3" style="flex-wrap:wrap;">
+            <a id="go-vote-btn"    class="btn btn-gradient flex-1" href="#">🗳️ Vote Now</a>
+            <a id="go-results-btn" class="btn btn-glass   flex-1" href="#">📊 Results</a>
+            <a href="create.html"  class="btn btn-glass   flex-1">+ New Poll</a>
+          </div>
+        </div>
+
+      </div><!-- wizard-card -->
+    </div>
+  </main>
+
+  <footer class="footer">
+    <a href="index.html">← Back to Dashboard</a>
+  </footer>
+</div>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/store.js"></script>
+<script src="js/polls.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function() {
+  // ============================================================
+  // STATE
+  // ============================================================
+  let currentStep = 1;
+  let selectedType = 'single';
+  let selectedHours = 0;
+  const TOTAL_STEPS = 5;
+
+  const state = {
+    title: '', description: '', creatorName: '',
+    type: 'single', options: [], expiresAt: null,
+    createdPoll: null, creatorToken: null
+  };
+
+  // ============================================================
+  // RENDER STEPS INDICATOR
+  // ============================================================
+  function renderSteps() {
+    const container = document.getElementById('steps-indicator');
+    const labels    = ['Topic','Type','Options','Settings','Share'];
+    let html = '';
+    labels.forEach((label, i) => {
+      const n    = i + 1;
+      const cls  = n < currentStep ? 'done' : (n === currentStep ? 'active' : '');
+      const icon = n < currentStep ? '✓' : n;
+      html += `<div class="step" role="listitem">
+        <div class="step-dot ${cls}" title="${label}">${icon}</div>
+        ${n < TOTAL_STEPS ? `<div class="step-line ${n < currentStep ? 'done' : ''}"></div>` : ''}
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function goToStep(n) {
+    document.querySelectorAll('.wizard-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`panel-${n}`).classList.add('active');
+    currentStep = n;
+    renderSteps();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ============================================================
+  // STEP 1 — Title
+  // ============================================================
+  const titleInput = document.getElementById('poll-title');
+  titleInput.addEventListener('input', () => {
+    document.getElementById('title-count').textContent = `${titleInput.value.length}/200`;
+  });
+
+  document.getElementById('step1-next').addEventListener('click', () => {
+    const title = titleInput.value.trim();
+    if (!title) { UI.toast('Please enter a poll title', 'warning'); titleInput.classList.add('is-error'); return; }
+    titleInput.classList.remove('is-error');
+    state.title       = title;
+    state.description = document.getElementById('poll-desc').value.trim();
+    state.creatorName = document.getElementById('creator-name').value.trim();
+    goToStep(2);
+  });
+
+  // ============================================================
+  // STEP 2 — Type
+  // ============================================================
+  function renderTypeGrid() {
+    const grid = document.getElementById('type-grid');
+    grid.innerHTML = Object.entries(Polls.TYPES).map(([key, t]) => `
+      <div class="type-card ${key === selectedType ? 'selected' : ''}" data-type="${key}">
+        <div class="type-card-icon">${t.icon}</div>
+        <div class="type-card-name">${t.label}</div>
+        <div class="type-card-desc">${t.desc}</div>
+      </div>
+    `).join('');
+    grid.querySelectorAll('.type-card').forEach(card => {
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedType = card.dataset.type;
+      });
+    });
+  }
+  renderTypeGrid();
+
+  document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
+  document.getElementById('step2-next').addEventListener('click', () => {
+    state.type = selectedType;
+    prepareStep3();
+    goToStep(3);
+  });
+
+  // ============================================================
+  // STEP 3 — Options
+  // ============================================================
+  let optionCount = 0;
+
+  function addOptionRow(placeholder = '') {
+    optionCount++;
+    const list = document.getElementById('options-list');
+    const row  = document.createElement('div');
+    row.className = 'option-row animate-slide-up';
+    row.dataset.idx = optionCount;
+    row.innerHTML = `
+      <input type="text" class="form-input opt-input" placeholder="${placeholder || `Option ${optionCount}`}" maxlength="120" />
+      <button class="opt-remove" title="Remove option">✕</button>
+    `;
+    row.querySelector('.opt-remove').addEventListener('click', () => {
+      if (document.querySelectorAll('.option-row').length <= 2) {
+        UI.toast('Keep at least 2 options', 'warning'); return;
+      }
+      row.remove();
+    });
+    list.appendChild(row);
+  }
+
+  function prepareStep3() {
+    const container = document.getElementById('options-container');
+    const yesnoNote = document.getElementById('yesno-notice');
+    const subText   = document.getElementById('options-sub');
+
+    if (state.type === 'yesno') {
+      container.classList.add('hidden');
+      yesnoNote.classList.remove('hidden');
+      subText.textContent = 'Yes / No options are pre-set.';
+    } else {
+      container.classList.remove('hidden');
+      yesnoNote.classList.add('hidden');
+      subText.textContent = state.type === 'ranked'
+        ? 'Add the items to rank. Voters will drag them into their preferred order.'
+        : 'Add the choices your friends can pick from.';
+      // Reset and add 2 default rows
+      document.getElementById('options-list').innerHTML = '';
+      optionCount = 0;
+      addOptionRow('');
+      addOptionRow('');
+    }
+  }
+
+  document.getElementById('add-option-btn').addEventListener('click', () => {
+    if (document.querySelectorAll('.option-row').length >= 10) {
+      UI.toast('Maximum 10 options', 'warning'); return;
+    }
+    addOptionRow('');
+  });
+
+  document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+  document.getElementById('step3-next').addEventListener('click', () => {
+    const rawOpts = [...document.querySelectorAll('.opt-input')].map(i => i.value);
+    state.options = rawOpts;
+
+    const { valid, errors } = Polls.validate({ title: state.title, type: state.type, options: rawOpts });
+    if (!valid) { UI.toast(errors[0], 'error'); return; }
+    goToStep(4);
+  });
+
+  // ============================================================
+  // STEP 4 — Settings
+  // ============================================================
+  document.getElementById('timer-pills').querySelectorAll('.timer-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.timer-pill').forEach(p => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      selectedHours = parseInt(pill.dataset.hours);
+    });
+  });
+
+  document.getElementById('step4-back').addEventListener('click', () => goToStep(3));
+  document.getElementById('step4-create').addEventListener('click', createPoll);
+
+  async function createPoll() {
+    const btn = document.getElementById('step4-create');
+    UI.setLoading(btn, true);
+
+    try {
+      const options  = Polls.buildOptions(state.type, state.options);
+      const code     = Polls.generateCode();
+      const token    = Polls.generateCreatorToken();
+      const expiresAt= Polls.expiryTimestamp(selectedHours);
+
+      const pollData = {
+        code,
+        title:       state.title,
+        description: state.description,
+        creatorName: state.creatorName || 'Anonymous',
+        creatorToken:token,
+        type:        state.type,
+        options,
+        expiresAt:   expiresAt || null
+      };
+
+      const poll = await Store.createPoll(pollData);
+      Store.saveMyPoll(poll, token);
+
+      state.createdPoll  = poll;
+      state.creatorToken = token;
+
+      // Populate share step
+      document.getElementById('share-code').textContent = poll.code;
+
+      const voteUrl    = App.buildUrl('vote.html',    { code: poll.code });
+      const resultsUrl = App.buildUrl('results.html', { code: poll.code });
+
+      document.getElementById('vote-link').value    = voteUrl;
+      document.getElementById('results-link').value = resultsUrl;
+      document.getElementById('go-vote-btn').href    = voteUrl;
+      document.getElementById('go-results-btn').href = resultsUrl;
+
+      document.getElementById('copy-code-btn').addEventListener('click', function() {
+        UI.copyToClipboard(poll.code, this);
+      });
+      document.getElementById('copy-vote-link').addEventListener('click', function() {
+        UI.copyToClipboard(voteUrl, this);
+      });
+      document.getElementById('copy-results-link').addEventListener('click', function() {
+        UI.copyToClipboard(resultsUrl, this);
+      });
+
+      UI.showConfetti();
+      goToStep(5);
+    } catch (err) {
+      console.error(err);
+      UI.toast('Failed to create poll. Check your Firebase config.', 'error');
+    } finally {
+      UI.setLoading(btn, false);
+    }
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  renderSteps();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /polls/{pollId} {
+      // Anyone can read polls (needed to look up by code)
+      allow read: if true;
+
+      // Anyone can create a poll
+      allow create: if request.resource.data.keys().hasAll([
+        'code', 'title', 'type', 'options', 'status', 'createdAt', 'totalVotes'
+      ]);
+
+      // Only allow updating specific fields (status close, totalVotes increment)
+      allow update: if request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly(['status', 'closedAt', 'totalVotes']);
+
+      // No deletes
+      allow delete: if false;
+
+      match /votes/{voteId} {
+        // Anyone can read votes (for results rendering)
+        allow read: if true;
+
+        // Anyone can cast a vote (one per session enforced client-side)
+        allow create: if request.resource.data.keys().hasAll([
+          'voterId', 'voterName', 'castedAt'
+        ]);
+
+        // Votes are immutable
+        allow update, delete: if false;
+      }
+    }
+  }
+}

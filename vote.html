@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vote — VoteSpace</title>
+  <meta name="description" content="Cast your vote on this poll." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    .vote-card {
+      max-width:620px; margin:0 auto;
+      background:var(--glass-bg);
+      border:1px solid var(--glass-border);
+      border-radius:var(--r-2xl);
+      backdrop-filter:blur(20px);
+      padding:var(--s8);
+    }
+    .poll-header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s4); flex-wrap:wrap; margin-bottom:var(--s6); }
+    .poll-header-meta { display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap; }
+    .name-field {
+      display:flex; align-items:center;
+      background:var(--bg-secondary);
+      border:1px solid var(--glass-border);
+      border-radius:var(--r-lg);
+      padding:var(--s3) var(--s4);
+      gap:var(--s3); margin-bottom:var(--s6);
+      transition:all var(--t-base);
+    }
+    .name-field:focus-within { border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,58,237,0.18); }
+    .name-field-icon { font-size:1.1rem; flex-shrink:0; }
+    .name-field input {
+      flex:1; background:transparent; border:none;
+      color:var(--text-primary); font-size:0.95rem;
+      font-family:var(--font-body);
+    }
+    .name-field input::placeholder { color:var(--text-muted); }
+    .ranked-hint {
+      background:rgba(124,58,237,0.08);
+      border:1px solid rgba(124,58,237,0.18);
+      border-radius:var(--r-lg);
+      padding:var(--s3) var(--s4);
+      font-size:0.82rem; color:var(--violet-light);
+      margin-bottom:var(--s4); text-align:center;
+    }
+    /* Prevent text selection during drag */
+    #ranked-options-list { user-select:none; }
+    .option-card.dragging { opacity:0.4; transform:scale(0.98); }
+  </style>
+</head>
+<body>
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <span class="logo-icon">🗳️</span>
+      <span class="logo-text">VoteSpace</span>
+    </a>
+    <div class="nav-actions">
+      <a href="create.html" class="btn btn-gradient btn-sm">+ New Poll</a>
+    </div>
+  </nav>
+
+  <main class="page-top page-body" id="main-content" role="main">
+
+    <!-- LOADING STATE -->
+    <div id="state-loading" class="container-xs" style="padding-top:var(--s12);">
+      <div class="flex-col items-center gap-6 text-center">
+        <div class="spinner spinner-lg"></div>
+        <p class="text-secondary">Loading poll…</p>
+      </div>
+    </div>
+
+    <!-- ERROR STATE -->
+    <div id="state-error" class="container-xs hidden">
+      <div class="empty-state">
+        <div class="empty-icon">😕</div>
+        <p class="empty-title">Poll not found</p>
+        <p class="empty-desc" id="error-msg">That code didn't match any poll. Double-check and try again.</p>
+        <a href="index.html" class="btn btn-gradient mt-4">← Back to Home</a>
+      </div>
+    </div>
+
+    <!-- ALREADY VOTED STATE -->
+    <div id="state-voted" class="container-xs hidden">
+      <div class="vote-confirm">
+        <div class="vote-confirm-icon">✅</div>
+        <h2 class="vote-confirm-title">Already voted!</h2>
+        <p class="vote-confirm-text">You've already cast your vote in this poll. Results will be revealed once it closes.</p>
+        <div class="flex gap-3 flex-wrap" style="justify-content:center;">
+          <a id="voted-results-link" href="#" class="btn btn-gradient">📊 Check Results</a>
+          <a href="index.html" class="btn btn-glass">🏠 Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLOSED STATE — redirect to results -->
+    <div id="state-closed" class="container-xs hidden">
+      <div class="vote-confirm">
+        <div class="vote-confirm-icon">🔒</div>
+        <h2 class="vote-confirm-title">Poll is closed</h2>
+        <p class="vote-confirm-text">Voting has ended. Head to the results page to see who won!</p>
+        <a id="closed-results-link" href="#" class="btn btn-gradient mt-4">📊 See Results</a>
+      </div>
+    </div>
+
+    <!-- VOTING STATE -->
+    <div id="state-vote" class="container-xs hidden">
+      <div class="vote-card animate-slide-up">
+
+        <!-- Poll Header -->
+        <div class="poll-header-row">
+          <div>
+            <h1 id="poll-title" style="font-size:clamp(1.3rem,3vw,1.75rem);">…</h1>
+            <p id="poll-description" class="text-secondary text-sm mt-2 hidden"></p>
+          </div>
+          <div class="poll-header-meta">
+            <span class="badge badge-emerald" id="poll-type-badge">…</span>
+            <div class="timer-badge hidden" id="timer-display">
+              <span class="pulse-dot"></span>
+              <span id="timer-text">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name Field -->
+        <div class="name-field">
+          <span class="name-field-icon">👤</span>
+          <input type="text" id="voter-name" placeholder="Your name (optional — leave blank to vote anonymously)" maxlength="60" autocomplete="name" aria-label="Your name" />
+        </div>
+
+        <!-- Single / Multiple options -->
+        <div id="options-wrapper" class="flex-col gap-3 hidden" role="group" aria-label="Vote options">
+          <!-- Injected by JS -->
+        </div>
+
+        <!-- Ranked options -->
+        <div id="ranked-wrapper" class="hidden">
+          <div class="ranked-hint">🖱️ Drag to reorder · Use ▲▼ on mobile</div>
+          <div class="flex-col gap-3" id="ranked-options-list" role="list" aria-label="Rank options by dragging">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- Yes / No options -->
+        <div id="yesno-wrapper" class="yesno-grid hidden" role="group" aria-label="Yes or No">
+          <!-- Injected by JS -->
+        </div>
+
+        <!-- Submit -->
+        <div class="mt-6">
+          <button id="submit-vote-btn" class="btn btn-gradient btn-xl w-full" disabled>
+            Cast My Vote
+          </button>
+          <p class="text-center text-xs text-muted mt-3">You can only vote once per poll.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUCCESS STATE (after submitting) -->
+    <div id="state-success" class="container-xs hidden">
+      <div class="vote-confirm">
+        <div class="vote-confirm-icon">🎉</div>
+        <h2 class="vote-confirm-title">Vote cast!</h2>
+        <p class="vote-confirm-text" id="success-msg">Your vote has been recorded. Results will appear once the creator closes the poll.</p>
+        <div class="flex gap-3 flex-wrap" style="justify-content:center;">
+          <a id="success-results-link" href="#" class="btn btn-gradient">📊 View Results</a>
+          <a href="index.html" class="btn btn-glass">🏠 Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/store.js"></script>
+<script src="js/polls.js"></script>
+<script src="js/vote.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function() {
+  // ---- Helpers ----
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
+  function setAll(...ids) { ids.forEach(hide); }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ---- Get poll code from URL ----
+  const code = App.getParam('code');
+  const resultsUrl = App.buildUrl('results.html', { code: code || '' });
+
+  if (!code) {
+    setAll('state-loading');
+    show('state-error');
+    return;
+  }
+
+  let poll = null;
+  try {
+    poll = await Store.getPollByCode(code);
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (!poll) {
+    setAll('state-loading');
+    show('state-error');
+    document.getElementById('error-msg').textContent = `No poll found with code "${code}".`;
+    return;
+  }
+
+  hide('state-loading');
+
+  const pollResultsUrl = App.buildUrl('results.html', { code: poll.code });
+
+  // ---- Closed? ----
+  if (Polls.isClosed(poll)) {
+    show('state-closed');
+    document.getElementById('closed-results-link').href = pollResultsUrl;
+    return;
+  }
+
+  // ---- Already voted? ----
+  if (Store.hasVoted(poll.id)) {
+    show('state-voted');
+    document.getElementById('voted-results-link').href = pollResultsUrl;
+    return;
+  }
+
+  // ---- Show voting UI ----
+  show('state-vote');
+  Vote.init(poll);
+
+  // Poll header
+  document.getElementById('poll-title').textContent = poll.title;
+  document.title = `${poll.title} — VoteSpace`;
+
+  if (poll.description) {
+    const d = document.getElementById('poll-description');
+    d.textContent = poll.description;
+    d.classList.remove('hidden');
+  }
+
+  const { text: stText, cls: stCls } = Polls.statusBadge(poll);
+  const typeBadge = document.getElementById('poll-type-badge');
+  typeBadge.textContent = Polls.typeBadge(poll.type);
+  typeBadge.className   = `badge ${poll.type === 'yesno' ? 'badge-pink' : 'badge-violet'}`;
+
+  // Timer
+  if (poll.expiresAt) {
+    const timerEl = document.getElementById('timer-display');
+    timerEl.classList.remove('hidden');
+    App.startCountdown(poll, document.getElementById('timer-text'), () => {
+      UI.toast('⏱ Time is up! Poll has closed.', 'warning');
+      hide('state-vote');
+      show('state-closed');
+      document.getElementById('closed-results-link').href = pollResultsUrl;
+    });
+  }
+
+  // ---- Render options by type ----
+  if (poll.type === 'single' || poll.type === 'multiple') {
+    const wrapper = document.getElementById('options-wrapper');
+    show('options-wrapper');
+    poll.options.forEach(opt => {
+      const card = document.createElement('div');
+      card.className = 'option-card';
+      card.dataset.optId = opt.id;
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.innerHTML = `
+        <div class="option-selector ${poll.type === 'multiple' ? 'sq' : ''}">
+          <span class="option-check">✓</span>
+        </div>
+        <span class="option-text">${escHtml(opt.text)}</span>
+      `;
+      card.addEventListener('click',   () => Vote.toggle(opt.id, poll.type));
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') Vote.toggle(opt.id, poll.type); });
+      wrapper.appendChild(card);
+    });
+
+  } else if (poll.type === 'ranked') {
+    show('ranked-wrapper');
+    const list = document.getElementById('ranked-options-list');
+    poll.options.forEach((opt, i) => {
+      const card = document.createElement('div');
+      card.className  = 'option-card';
+      card.dataset.optId = opt.id;
+      card.setAttribute('draggable', 'true');
+      card.setAttribute('role', 'listitem');
+      card.innerHTML = `
+        <span class="rank-number">#${i+1}</span>
+        <span class="rank-handle">⠿</span>
+        <span class="option-text">${escHtml(opt.text)}</span>
+      `;
+      list.appendChild(card);
+    });
+    Vote.initDragDrop('ranked-options-list');
+    // Ranked is always valid once rendered
+    setTimeout(() => {
+      const btn = document.getElementById('submit-vote-btn');
+      if (btn) btn.disabled = false;
+    }, 200);
+
+  } else if (poll.type === 'yesno') {
+    const wrapper = document.getElementById('yesno-wrapper');
+    show('yesno-wrapper');
+    poll.options.forEach(opt => {
+      const isYes = opt.id === 'yes';
+      const card  = document.createElement('div');
+      card.className  = 'yesno-card';
+      card.dataset.optId = opt.id;
+      card.innerHTML  = `
+        <div class="yesno-icon">${isYes ? '👍' : '👎'}</div>
+        <div class="yesno-label">${isYes ? 'Yes' : 'No'}</div>
+      `;
+      card.addEventListener('click', () => Vote.toggle(opt.id, 'yesno'));
+      wrapper.appendChild(card);
+    });
+  }
+
+  // ---- Submit ----
+  document.getElementById('submit-vote-btn').addEventListener('click', async function() {
+    if (!Vote.isValid()) { UI.toast('Please make a selection first', 'warning'); return; }
+
+    UI.setLoading(this, true);
+    try {
+      const voterName = document.getElementById('voter-name').value.trim();
+      const voteData  = Vote.getVoteData(voterName);
+      await Store.castVote(poll.id, voteData);
+      Store.markVoted(poll.id);
+
+      // Show success
+      hide('state-vote');
+      show('state-success');
+      document.getElementById('success-results-link').href = pollResultsUrl;
+      document.getElementById('success-msg').textContent =
+        `Your vote has been recorded${voterName ? `, ${voterName}` : ''}! Results will appear once the creator closes the poll.`;
+
+    } catch (err) {
+      console.error(err);
+      UI.toast('Failed to cast vote. Please try again.', 'error');
+      UI.setLoading(this, false);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

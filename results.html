@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Results — VoteSpace</title>
+  <meta name="description" content="View the live results of this poll on VoteSpace." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    .results-card {
+      max-width:720px; margin:0 auto;
+      background:var(--glass-bg);
+      border:1px solid var(--glass-border);
+      border-radius:var(--r-2xl);
+      backdrop-filter:blur(20px);
+      padding:var(--s8);
+    }
+    .results-header {
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:var(--s6); flex-wrap:wrap; margin-bottom:var(--s8);
+      padding-bottom:var(--s6);
+      border-bottom:1px solid var(--glass-border);
+    }
+    .results-meta { display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap; }
+    .section-sub { font-size:1rem; font-weight:700; color:var(--text-secondary); margin-bottom:var(--s4); display:flex; align-items:center; gap:var(--s2); }
+    .voters-section { margin-top:var(--s8); padding-top:var(--s6); border-top:1px solid var(--glass-border); }
+    .action-row { display:flex; gap:var(--s3); flex-wrap:wrap; margin-top:var(--s8); padding-top:var(--s6); border-top:1px solid var(--glass-border); }
+    .live-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:var(--emerald);
+      animation:pulse 1.4s ease-in-out infinite;
+      display:inline-block; margin-right:4px;
+    }
+  </style>
+</head>
+<body>
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="page">
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <span class="logo-icon">🗳️</span>
+      <span class="logo-text">VoteSpace</span>
+    </a>
+    <div class="nav-actions">
+      <a href="create.html" class="btn btn-gradient btn-sm">+ New Poll</a>
+    </div>
+  </nav>
+
+  <main class="page-top page-body" role="main">
+
+    <!-- LOADING -->
+    <div id="state-loading" class="container-xs" style="padding-top:var(--s12);">
+      <div class="flex-col items-center gap-6 text-center">
+        <div class="spinner spinner-lg"></div>
+        <p class="text-secondary">Loading results…</p>
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="state-error" class="container-xs hidden">
+      <div class="empty-state">
+        <div class="empty-icon">😕</div>
+        <p class="empty-title">Poll not found</p>
+        <p class="empty-desc" id="error-msg">That code didn't match any poll.</p>
+        <a href="index.html" class="btn btn-gradient mt-4">← Home</a>
+      </div>
+    </div>
+
+    <!-- WAITING (poll still active, user has voted) -->
+    <div id="state-waiting" class="container-xs hidden">
+      <div class="waiting-state animate-slide-up">
+        <div class="waiting-icon">⏳</div>
+        <h2 style="font-size:1.75rem;font-weight:700;">Waiting for results…</h2>
+        <p class="text-secondary" style="max-width:380px;">
+          Your vote is in! Results will appear here the moment the creator closes the poll.
+        </p>
+        <div class="timer-badge hidden" id="waiting-timer">
+          <span class="pulse-dot"></span>
+          <span id="waiting-timer-text">—</span>
+        </div>
+        <p class="text-xs text-muted">Poll code: <span id="waiting-code" class="poll-code-chip"></span></p>
+        <div class="flex gap-3 mt-6 flex-wrap" style="justify-content:center;">
+          <a id="waiting-vote-link" href="#" class="btn btn-glass">← Back to Poll</a>
+          <a href="index.html" class="btn btn-glass">🏠 Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOT VOTED YET (poll still active) -->
+    <div id="state-not-voted" class="container-xs hidden">
+      <div class="waiting-state animate-slide-up">
+        <div class="waiting-icon">🗳️</div>
+        <h2 style="font-size:1.75rem;font-weight:700;">Poll still open</h2>
+        <p class="text-secondary" style="max-width:380px;">
+          Results are hidden until the poll closes. Cast your vote first!
+        </p>
+        <a id="go-vote-link" href="#" class="btn btn-gradient mt-4">Vote Now →</a>
+      </div>
+    </div>
+
+    <!-- RESULTS (poll closed) -->
+    <div id="state-results" class="container-sm hidden">
+      <div class="results-card animate-slide-up">
+
+        <!-- Header -->
+        <div class="results-header">
+          <div>
+            <div class="results-meta mb-3">
+              <span class="badge badge-red" id="results-status-badge">Closed</span>
+              <span class="badge" id="results-type-badge">—</span>
+            </div>
+            <h1 id="results-title" style="font-size:clamp(1.3rem,3vw,1.9rem);">…</h1>
+            <p id="results-description" class="text-secondary text-sm mt-2 hidden"></p>
+            <p class="text-xs text-muted mt-3" id="results-created-by"></p>
+          </div>
+          <div class="flex-col gap-3 items-center" style="text-align:center;">
+            <div class="stat-item">
+              <div class="stat-value" id="total-votes-val">0</div>
+              <div class="stat-label">Total Votes</div>
+            </div>
+            <button id="close-poll-btn" class="btn btn-danger btn-sm hidden">🔒 Close Poll</button>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div>
+          <p class="section-sub">📊 Results</p>
+          <div id="results-chart" aria-label="Poll results chart">
+            <div class="spinner"></div>
+          </div>
+        </div>
+
+        <!-- Voter list -->
+        <div class="voters-section">
+          <p class="section-sub">
+            <span class="live-dot" id="live-dot"></span> Who Voted
+            <span class="badge badge-gray ml-2" id="voter-count-badge">0</span>
+          </p>
+          <div id="voters-list" aria-label="List of voters">
+            <div class="spinner spinner-sm"></div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-row">
+          <button id="share-results-btn" class="btn btn-glass">🔗 Share Results</button>
+          <a id="vote-again-link" href="#" class="btn btn-glass">← View Poll</a>
+          <a href="create.html" class="btn btn-gradient">+ New Poll</a>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/store.js"></script>
+<script src="js/polls.js"></script>
+<script src="js/results.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function() {
+  // ---- Helpers ----
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+  const code = App.getParam('code');
+  if (!code) { hide('state-loading'); show('state-error'); return; }
+
+  // ---- Fetch poll ----
+  let poll = null;
+  try {
+    poll = await Store.getPollByCode(code);
+  } catch (e) { console.error(e); }
+
+  if (!poll) {
+    hide('state-loading');
+    show('state-error');
+    document.getElementById('error-msg').textContent = `No poll found with code "${code}".`;
+    return;
+  }
+
+  hide('state-loading');
+
+  const voteUrl    = App.buildUrl('vote.html',    { code: poll.code });
+  const resultsUrl = App.buildUrl('results.html', { code: poll.code });
+  const isClosed   = Polls.isClosed(poll);
+  const hasVoted   = Store.hasVoted(poll.id);
+  const isCreator  = !!Store.getCreatorToken(poll.id);
+
+  // ---- Poll still active ----
+  if (!isClosed) {
+    if (hasVoted) {
+      // Voted — waiting screen
+      show('state-waiting');
+      document.getElementById('waiting-code').textContent = poll.code;
+      document.getElementById('waiting-vote-link').href = voteUrl;
+
+      if (poll.expiresAt) {
+        const timerEl = document.getElementById('waiting-timer');
+        timerEl.classList.remove('hidden');
+        App.startCountdown(poll, document.getElementById('waiting-timer-text'), () => {
+          window.location.reload();
+        });
+      }
+
+      // If creator — show close button in waiting mode too
+      if (isCreator) {
+        const closeBtnEl = document.createElement('button');
+        closeBtnEl.className = 'btn btn-danger mt-4';
+        closeBtnEl.textContent = '🔒 Close Poll & Reveal Results';
+        closeBtnEl.addEventListener('click', () => handleClosePoll(poll.id));
+        document.getElementById('state-waiting').querySelector('.waiting-state').appendChild(closeBtnEl);
+      }
+
+    } else {
+      // Hasn't voted — send to vote
+      show('state-not-voted');
+      document.getElementById('go-vote-link').href = voteUrl;
+
+      if (isCreator) {
+        const closeBtnEl = document.createElement('button');
+        closeBtnEl.className = 'btn btn-danger mt-4';
+        closeBtnEl.textContent = '🔒 Close Poll & Reveal Results';
+        closeBtnEl.addEventListener('click', () => handleClosePoll(poll.id));
+        document.getElementById('state-not-voted').querySelector('.waiting-state').appendChild(closeBtnEl);
+      }
+    }
+    return;
+  }
+
+  // ---- Poll is closed — show results ----
+  show('state-results');
+  document.title = `Results: ${poll.title} — VoteSpace`;
+
+  // Populate header
+  document.getElementById('results-title').textContent       = poll.title;
+  document.getElementById('results-created-by').textContent  = `Created by ${poll.creatorName || 'Anonymous'} · ${UI.formatDate(poll.createdAt)}`;
+
+  const { text: stText, cls: stCls } = Polls.statusBadge(poll);
+  const statusBadge = document.getElementById('results-status-badge');
+  statusBadge.textContent = stText;
+  statusBadge.className   = `badge ${stCls}`;
+
+  const typeBadge = document.getElementById('results-type-badge');
+  typeBadge.textContent = Polls.typeBadge(poll.type);
+  typeBadge.className   = `badge badge-${poll.type === 'yesno' ? 'pink' : 'violet'}`;
+
+  if (poll.description) {
+    const d = document.getElementById('results-description');
+    d.textContent = poll.description;
+    d.classList.remove('hidden');
+  }
+
+  // Vote link
+  document.getElementById('vote-again-link').href = voteUrl;
+
+  // Share results
+  document.getElementById('share-results-btn').addEventListener('click', function() {
+    UI.copyToClipboard(resultsUrl, this);
+  });
+
+  // Close poll button (creator only, but poll already closed here — hide)
+  hide('close-poll-btn');
+
+  // ---- Load votes & render ----
+  let unsubscribeVotes = null;
+
+  async function loadAndRender() {
+    try {
+      const votes = await Store.getVotes(poll.id);
+      const computed = Results.calculate(votes, poll.options, poll.type);
+
+      // Update stat counter
+      UI.animateCounter(document.getElementById('total-votes-val'), votes.length);
+      document.getElementById('voter-count-badge').textContent = votes.length;
+
+      // Render chart
+      Results.render(computed, document.getElementById('results-chart'), poll.type);
+
+      // Render voter list
+      Results.renderVoterList(votes, document.getElementById('voters-list'));
+
+    } catch (err) {
+      console.error('Error loading votes:', err);
+      document.getElementById('results-chart').innerHTML =
+        '<p class="text-muted text-sm text-center">Could not load results. Check Firebase connection.</p>';
+    }
+  }
+
+  await loadAndRender();
+
+  // Live updates (Firestore real-time)
+  unsubscribeVotes = Store.onVotesUpdate(poll.id, (votes) => {
+    const computed = Results.calculate(votes, poll.options, poll.type);
+    UI.animateCounter(document.getElementById('total-votes-val'), votes.length);
+    document.getElementById('voter-count-badge').textContent = votes.length;
+    Results.render(computed, document.getElementById('results-chart'), poll.type);
+    Results.renderVoterList(votes, document.getElementById('voters-list'));
+  });
+
+  // ---- Close poll handler ----
+  async function handleClosePoll(pollId) {
+    UI.showModal({
+      title: '🔒 Close this poll?',
+      body:  'Voting will end immediately and results will be revealed to everyone. This cannot be undone.',
+      actions: [
+        { id:'modal-cancel',  label:'Cancel',     cls:'btn-glass',   onClick: () => UI.hideModal() },
+        { id:'modal-confirm', label:'Close Poll',  cls:'btn-danger',  onClick: async () => {
+          UI.hideModal();
+          try {
+            await Store.closePoll(pollId);
+            UI.toast('Poll closed! Results are now visible.', 'success');
+            window.location.reload();
+          } catch {
+            UI.toast('Failed to close poll', 'error');
+          }
+        }}
+      ]
+    });
+  }
+
+  // Close button on results card
+  const closePollBtn = document.getElementById('close-poll-btn');
+  if (isCreator && !isClosed) {
+    closePollBtn.classList.remove('hidden');
+    closePollBtn.addEventListener('click', () => handleClosePoll(poll.id));
+  }
+
+  // Cleanup on page leave
+  window.addEventListener('beforeunload', () => {
+    if (unsubscribeVotes) unsubscribeVotes();
+  });
+
+})();
+</script>
+</body>
+</html>
