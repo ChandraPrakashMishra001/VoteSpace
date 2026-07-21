@@ -76,9 +76,9 @@ export function expiryTimestamp(hours: number): Date | null {
   return new Date(Date.now() + hours * 3600 * 1000);
 }
 
-export function timeLeft(expiresAt: Timestamp | null | undefined): string | null {
+export function timeLeft(expiresAt: Timestamp | Date | null | undefined): string | null {
   if (!expiresAt) return null;
-  const end  = expiresAt.toDate ? expiresAt.toDate() : new Date(expiresAt as unknown as number);
+  const end  = (expiresAt as Timestamp).toDate ? (expiresAt as Timestamp).toDate() : new Date(expiresAt as unknown as number);
   const diff = (end.getTime() - Date.now()) / 1000;
   if (diff <= 0) return "Expired";
   const h = Math.floor(diff / 3600);
@@ -89,9 +89,9 @@ export function timeLeft(expiresAt: Timestamp | null | undefined): string | null
   return `${s}s`;
 }
 
-export function timeAgo(ts: Timestamp | null | undefined): string {
+export function timeAgo(ts: Timestamp | Date | null | undefined): string {
   if (!ts) return "";
-  const d    = ts.toDate ? ts.toDate() : new Date(ts as unknown as number);
+  const d    = (ts as Timestamp).toDate ? (ts as Timestamp).toDate() : new Date(ts as unknown as number);
   const diff = (Date.now() - d.getTime()) / 1000;
   if (diff < 60)    return "just now";
   if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
