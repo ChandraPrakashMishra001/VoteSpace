@@ -368,7 +368,7 @@ function ResultsInner() {
 // ─── Page ─────────────────────────────────────────────────────
 export default function ResultsPage() {
   return (
-    <div className="relative min-h-screen bg-[#05050f]">
+    <div className="relative min-h-screen">
       <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.12)_0%,transparent_60%)]" />
       <Navbar />
       <main className="relative z-10 pt-28 pb-20 px-6">

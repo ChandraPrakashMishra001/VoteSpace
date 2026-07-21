@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BackgroundEffect } from "./background";
 
 export const metadata: Metadata = {
   title: "VoteSpace — Vote on Anything with Friends",
@@ -15,7 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased bg-[#05050f]">
+        <BackgroundEffect />
+        {children}
+      </body>
     </html>
   );
 }

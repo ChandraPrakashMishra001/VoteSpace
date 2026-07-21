@@ -448,7 +448,7 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#05050f]">
+    <div className="relative min-h-screen">
       <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.15)_0%,transparent_60%)]" />
       <div ref={confettiRef} className="confetti-container" />
       <Navbar />

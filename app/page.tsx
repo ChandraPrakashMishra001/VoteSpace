@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ElectricMist from "@/components/ui/electric-mist";
 import { getPollById, getMyPollsList } from "@/lib/store";
 import { normaliseCode, POLL_TYPES, timeAgo, timeLeft, isClosed, statusBadge } from "@/lib/polls";
 import type { Poll, MyPollEntry } from "@/lib/types";
@@ -265,11 +264,7 @@ function Features() {
 // ── Page ──────────────────────────────────────────────────────
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen bg-[#05050f]">
-      {/* Electric Mist — fixed background */}
-      <div className="fixed inset-0 z-0">
-        <ElectricMist color="#1a0a3c" speed={0.75} brightness={1.05} distortion={3.5} />
-      </div>
+    <div className="relative min-h-screen">
       {/* Bottom fade */}
       <div className="fixed inset-0 z-[1] bg-gradient-to-b from-transparent via-transparent to-[#05050f]/85 pointer-events-none" />
 
