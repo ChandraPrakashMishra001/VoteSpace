@@ -16,8 +16,8 @@ service cloud.firestore {
         .affectedKeys()
         .hasOnly(['status', 'closedAt', 'totalVotes']);
 
-      // No deletes
-      allow delete: if false;
+      // Allow deleting polls
+      allow delete: if true;
 
       match /votes/{voteId} {
         // Anyone can read votes (for results rendering)
@@ -28,8 +28,9 @@ service cloud.firestore {
           'voterId', 'voterName', 'castedAt'
         ]);
 
-        // Votes are immutable
-        allow update, delete: if false;
+        // Votes deletion allowed on poll delete
+        allow update: if false;
+        allow delete: if true;
       }
     }
   }

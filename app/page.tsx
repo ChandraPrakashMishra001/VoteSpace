@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getPollById, getMyPollsList } from "@/lib/store";
+import { getPollById, getMyPollsList, deletePoll } from "@/lib/store";
 import { normaliseCode, POLL_TYPES, timeAgo, timeLeft, isClosed, statusBadge } from "@/lib/polls";
 import type { Poll, MyPollEntry } from "@/lib/types";
-import { Zap, BarChart3, Link2, Users, Plus, ArrowRight } from "lucide-react";
+import { Zap, BarChart3, Link2, Users, Plus, ArrowRight, Trash2 } from "lucide-react";
 
 // ── Navbar ────────────────────────────────────────────────────
 function Navbar() {
@@ -117,11 +117,28 @@ function Hero() {
 }
 
 // ── Poll Card ─────────────────────────────────────────────────
-function PollCard({ poll, index }: { poll: Poll; index: number }) {
+function PollCard({ poll, index, onDelete }: { poll: Poll; index: number; onDelete: (pollId: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
   const closed = isClosed(poll);
   const type   = POLL_TYPES[poll.type];
   const href   = closed ? `/results?code=${poll.code}` : `/vote?code=${poll.code}`;
   const tl     = !closed ? timeLeft(poll.expiresAt) : null;
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirming) {
+      onDelete(poll.id);
+    } else {
+      setConfirming(true);
+    }
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setConfirming(false);
+  };
 
   return (
     <Link
@@ -129,16 +146,48 @@ function PollCard({ poll, index }: { poll: Poll; index: number }) {
       className="group relative block overflow-hidden rounded-2xl border border-yellow-400/[0.10] bg-black/45 p-5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-yellow-400/[0.28] hover:bg-black/55 hover:shadow-xl hover:shadow-yellow-400/[0.08]"
       style={{ animationDelay: `${index * 55}ms` }}
     >
-      {/* Status dot */}
+      {/* Top row */}
       <div className="mb-3.5 flex items-start justify-between gap-3">
-        <p className="font-semibold leading-snug text-white line-clamp-2">{poll.title}</p>
-        <span className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-          closed
-            ? "bg-white/8 text-white/40"
-            : "bg-yellow-400/15 text-yellow-400"
-        }`}>
-          {closed ? "Closed" : "• Live"}
-        </span>
+        <p className="font-semibold leading-snug text-white line-clamp-2 pr-1">{poll.title}</p>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+            closed
+              ? "bg-white/8 text-white/40"
+              : "bg-yellow-400/15 text-yellow-400"
+          }`}>
+            {closed ? "Closed" : "• Live"}
+          </span>
+
+          {confirming ? (
+            <div className="flex items-center gap-1 z-20">
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-md bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white hover:bg-red-500 transition"
+                title="Confirm delete"
+              >
+                Delete?
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] font-bold text-white/60 hover:bg-white/20 hover:text-white transition"
+                title="Cancel"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/15 transition duration-150"
+              title="Delete poll"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-white/40">
@@ -180,6 +229,11 @@ function MyPolls() {
     });
   }, []);
 
+  const handleDeletePoll = useCallback(async (pollId: string) => {
+    setPolls((prev) => prev.filter((p) => p.id !== pollId));
+    await deletePoll(pollId);
+  }, []);
+
   return (
     <section className="relative z-10 border-t border-yellow-400/[0.07] bg-black/50 backdrop-blur-xl px-6 py-16">
       <div className="mx-auto max-w-5xl">
@@ -217,7 +271,9 @@ function MyPolls() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {polls.map((poll, i) => <PollCard key={poll.id} poll={poll} index={i} />)}
+            {polls.map((poll, i) => (
+              <PollCard key={poll.id} poll={poll} index={i} onDelete={handleDeletePoll} />
+            ))}
           </div>
         )}
       </div>

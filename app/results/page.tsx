@@ -2,13 +2,13 @@
 
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getPollByCode, getVotes, onVotesUpdate, closePoll, hasVoted, getCreatorToken } from "@/lib/store";
+import { getPollByCode, getVotes, onVotesUpdate, closePoll, deletePoll, hasVoted, getCreatorToken } from "@/lib/store";
 import { isClosed, timeAgo, timeLeft, POLL_TYPES, statusBadge } from "@/lib/polls";
 import { calculateResults, findWinner } from "@/lib/results";
 import type { Poll, Vote, ResultItem } from "@/lib/types";
-import { Share2, Lock, Plus, Trophy, Clock, Zap } from "lucide-react";
+import { Share2, Lock, Plus, Trophy, Clock, Zap, Trash2 } from "lucide-react";
 import type { Unsubscribe } from "firebase/firestore";
 
 // ─── Navbar ───────────────────────────────────────────────────
@@ -160,12 +160,30 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-6" onClick={onCancel}>
       <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
       <div className="relative mx-auto max-w-sm w-full rounded-2xl border border-white/10 bg-[#0d0d1f] p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-red-400/70">Irreversible action</p>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-yellow-400/70">Irreversible action</p>
         <h3 className="font-heading text-xl font-black text-white mb-2">Close this poll?</h3>
         <p className="text-sm text-white/45 mb-7 leading-relaxed">Voting will end immediately and results will be revealed to all voters. This cannot be undone.</p>
         <div className="flex gap-3">
           <button onClick={onCancel}  className="btn-ghost-yellow flex-1 rounded-xl py-2.5 text-sm">Cancel</button>
-          <button onClick={onConfirm} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-500 transition">Close Poll</button>
+          <button onClick={onConfirm} className="flex-1 rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-black hover:bg-yellow-300 transition">Close Poll</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Delete Confirm Modal ─────────────────────────────────────
+function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-6" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-md" />
+      <div className="relative mx-auto max-w-sm w-full rounded-2xl border border-red-500/20 bg-[#0d0d1f] p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-red-400">Irreversible action</p>
+        <h3 className="font-heading text-xl font-black text-white mb-2">Delete this poll?</h3>
+        <p className="text-sm text-white/45 mb-7 leading-relaxed">This poll and all recorded votes will be deleted permanently. This cannot be undone.</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="btn-ghost-yellow flex-1 rounded-xl py-2.5 text-sm">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-500 transition">Delete Poll</button>
         </div>
       </div>
     </div>
@@ -173,7 +191,7 @@ function ConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
 }
 
 // ─── Results View ─────────────────────────────────────────────
-function ResultsView({ poll, votes, isCreator, onClose }: { poll: Poll; votes: Vote[]; isCreator: boolean; onClose: () => void }) {
+function ResultsView({ poll, votes, isCreator, onClose, onDelete }: { poll: Poll; votes: Vote[]; isCreator: boolean; onClose: () => void; onDelete: () => void }) {
   const results = calculateResults(votes, poll.options, poll.type);
   const winner  = findWinner(results);
   const closed  = isClosed(poll);
@@ -228,7 +246,7 @@ function ResultsView({ poll, votes, isCreator, onClose }: { poll: Poll; votes: V
             <Trophy size={22} className="shrink-0 text-yellow-400" />
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400/70 mb-0.5">🏆 Winner</p>
-              <p className="font-heading font-black text-white">{winner.option.text}</p>
+              <p className="font-heading text-lg font-black text-white">{winner.option.text}</p>
             </div>
           </div>
         )}
@@ -290,16 +308,26 @@ function ResultsView({ poll, votes, isCreator, onClose }: { poll: Poll; votes: V
           </Link>
         </div>
 
-        {/* Creator close button */}
-        {isCreator && !closed && (
+        {/* Creator controls */}
+        {isCreator && (
           <div className="mt-4 border-t border-white/[0.06] pt-5">
-            <button
-              onClick={onClose}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/[0.08] py-3 text-sm font-bold text-red-400 transition hover:bg-red-500/15"
-            >
-              <Lock size={14} /> Close Poll &amp; Reveal Results
-            </button>
-            <p className="mt-2 text-center text-xs text-white/20">Only you can see this button as the poll creator.</p>
+            <div className="flex gap-3">
+              {!closed && (
+                <button
+                  onClick={onClose}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-yellow-400/25 bg-yellow-400/[0.08] py-2.5 text-sm font-bold text-yellow-400 transition hover:bg-yellow-400/15"
+                >
+                  <Lock size={14} /> Close Poll
+                </button>
+              )}
+              <button
+                onClick={onDelete}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/[0.08] py-2.5 text-sm font-bold text-red-400 transition hover:bg-red-500/15"
+              >
+                <Trash2 size={14} /> Delete Poll
+              </button>
+            </div>
+            <p className="mt-2 text-center text-xs text-white/20">Only you can see creator controls.</p>
           </div>
         )}
       </div>
@@ -310,12 +338,14 @@ function ResultsView({ poll, votes, isCreator, onClose }: { poll: Poll; votes: V
 // ─── Inner ────────────────────────────────────────────────────
 function ResultsInner() {
   const params = useSearchParams();
+  const router = useRouter();
   const code   = (params.get("code") ?? "").toUpperCase().trim();
-  const [poll,      setPoll]      = useState<Poll | null>(null);
-  const [votes,     setVotes]     = useState<Vote[]>([]);
-  const [view,      setView]      = useState<"loading"|"error"|"waiting"|"notvoted"|"results">("loading");
-  const [errMsg,    setErrMsg]    = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const [poll,            setPoll]            = useState<Poll | null>(null);
+  const [votes,           setVotes]           = useState<Vote[]>([]);
+  const [view,            setView]            = useState<"loading"|"error"|"waiting"|"notvoted"|"results">("loading");
+  const [errMsg,          setErrMsg]          = useState("");
+  const [showModal,       setShowModal]       = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const unsubRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
@@ -351,11 +381,24 @@ function ResultsInner() {
     } catch (e) { console.error(e); alert("Failed to close poll."); }
   }, [poll, code]);
 
+  const handleDeletePoll = useCallback(async () => {
+    if (!poll) return;
+    setShowDeleteModal(false);
+    try {
+      await deletePoll(poll.id);
+      router.push("/");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete poll.");
+    }
+  }, [poll, router]);
+
   const isCreator = poll ? !!getCreatorToken(poll.id) : false;
 
   return (
     <>
       {showModal && <ConfirmModal onConfirm={handleClosePoll} onCancel={() => setShowModal(false)} />}
+      {showDeleteModal && <DeleteConfirmModal onConfirm={handleDeletePoll} onCancel={() => setShowDeleteModal(false)} />}
       {view === "loading"  && <LoadingView />}
       {view === "error"    && <ErrorView msg={errMsg} />}
       {view === "waiting"  && poll && <WaitingView  poll={poll} isCreator={isCreator} onClose={() => setShowModal(true)} />}

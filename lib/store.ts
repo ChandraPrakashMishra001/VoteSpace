@@ -18,6 +18,7 @@ import {
   increment,
   serverTimestamp,
   writeBatch,
+  deleteDoc,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -56,6 +57,15 @@ export async function closePoll(pollId: string): Promise<void> {
     status: "closed",
     closedAt: serverTimestamp(),
   });
+}
+
+export async function deletePoll(pollId: string): Promise<void> {
+  removeMyPoll(pollId);
+  try {
+    await deleteDoc(doc(db, "polls", pollId));
+  } catch (err) {
+    console.error("Failed to delete poll from Firestore:", err);
+  }
 }
 
 export function onPollUpdate(pollId: string, callback: (poll: Poll) => void): Unsubscribe {
@@ -108,6 +118,12 @@ export function saveMyPoll(poll: Pick<Poll, "id" | "code" | "title" | "type">, c
   const deduped = list.filter((p) => p.id !== poll.id);
   deduped.unshift({ ...poll, savedAt: Date.now(), creatorToken });
   localStorage.setItem(LS_MY_POLLS, JSON.stringify(deduped.slice(0, 50)));
+}
+
+export function removeMyPoll(pollId: string): void {
+  const list = getMyPollsList();
+  const filtered = list.filter((p) => p.id !== pollId);
+  localStorage.setItem(LS_MY_POLLS, JSON.stringify(filtered));
 }
 
 export function getMyPollsList(): MyPollEntry[] {
