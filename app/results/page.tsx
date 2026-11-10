@@ -8,36 +8,9 @@ import { getPollByCode, getVotes, onVotesUpdate, closePoll, deletePoll, hasVoted
 import { isClosed, timeAgo, timeLeft, POLL_TYPES, statusBadge } from "@/lib/polls";
 import { calculateResults, findWinner } from "@/lib/results";
 import type { Poll, Vote, ResultItem } from "@/lib/types";
+import Navbar from "@/components/Navbar";
 import { Share2, Lock, Plus, Trophy, Clock, Zap, Trash2 } from "lucide-react";
 import type { Unsubscribe } from "firebase/firestore";
-
-// ─── Navbar ───────────────────────────────────────────────────
-function Navbar() {
-  return (
-    <nav className="fixed inset-x-0 top-0 z-50 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
-      <div className="flex items-center justify-center gap-2 border-b border-yellow-400/10 py-1.5 px-4 bg-yellow-400/[0.06]">
-        <span className="text-sm">⚡</span>
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-300/80">
-          IEEE VSSUT Student Branch
-        </span>
-        <span className="text-sm">⚡</span>
-      </div>
-      <div className="flex items-center justify-between px-6 py-3">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
-            <span className="text-lg">🗳️</span>
-          </div>
-          <span className="font-heading text-xl font-black tracking-tight">
-            Vote<span className="text-gradient">Space</span>
-          </span>
-        </Link>
-        <Link href="/create" className="btn-yellow flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">
-          <Plus size={14} strokeWidth={2.5} /> New Poll
-        </Link>
-      </div>
-    </nav>
-  );
-}
 
 // ─── Loading ──────────────────────────────────────────────────
 function LoadingView() {

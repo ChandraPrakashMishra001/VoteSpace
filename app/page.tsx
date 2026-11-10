@@ -6,40 +6,9 @@ import { useRouter } from "next/navigation";
 import { getPollById, getMyPollsList, deletePoll } from "@/lib/store";
 import { normaliseCode, POLL_TYPES, timeAgo, timeLeft, isClosed, statusBadge } from "@/lib/polls";
 import type { Poll, MyPollEntry } from "@/lib/types";
+import Navbar from "@/components/Navbar";
+import { cn } from "@/lib/utils";
 import { Zap, BarChart3, Link2, Users, Plus, ArrowRight, Trash2 } from "lucide-react";
-
-// ── Navbar ────────────────────────────────────────────────────
-function Navbar() {
-  return (
-    <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
-      {/* IEEE VSSUT Banner */}
-      <div className="flex items-center justify-center gap-2 border-b border-yellow-400/10 py-1.5 px-4 bg-yellow-400/[0.06]">
-        <span className="text-sm">⚡</span>
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-300/80">
-          IEEE VSSUT Student Branch
-        </span>
-        <span className="text-sm">⚡</span>
-      </div>
-      {/* Main nav row */}
-      <div className="flex items-center justify-between px-6 py-3">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
-            <span className="text-lg">🗳️</span>
-          </div>
-          <span className="font-heading text-xl font-black tracking-tight">
-            Vote<span className="text-gradient">Space</span>
-          </span>
-        </Link>
-        <Link
-          href="/create"
-          className="btn-yellow flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm"
-        >
-          <Plus size={15} strokeWidth={2.5} /> Create Poll
-        </Link>
-      </div>
-    </nav>
-  );
-}
 
 // ── Hero ──────────────────────────────────────────────────────
 function Hero() {
@@ -122,6 +91,46 @@ function Hero() {
         >
           <Plus size={14} /> Create a new poll
         </Link>
+      </div>
+
+      {/* Quick Pancake Poll Type Selector */}
+      <div
+        className="mt-12 w-full max-w-2xl text-center"
+        style={{ animation: "slide-up 0.7s cubic-bezier(.34,1.56,.64,1) 0.4s both" }}
+      >
+        <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/40 mb-4">
+          <span>🥞</span>
+          <span>Choose what poll you want to create</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          {(Object.keys(POLL_TYPES) as (keyof typeof POLL_TYPES)[]).map((tKey) => {
+            const t = POLL_TYPES[tKey];
+            const isFeatured = tKey === "participant";
+            return (
+              <Link
+                key={tKey}
+                href={`/create?type=${tKey}`}
+                className={cn(
+                  "group flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all duration-200 text-center",
+                  isFeatured
+                    ? "border-yellow-400/40 bg-yellow-400/[0.08] hover:border-yellow-400/80 hover:bg-yellow-400/[0.16] shadow-[0_0_20px_rgba(250,204,21,0.12)]"
+                    : "border-white/[0.08] bg-black/40 hover:border-yellow-400/30 hover:bg-yellow-400/[0.05]"
+                )}
+              >
+                <span className="text-2xl transition group-hover:scale-110 mb-1.5">{t.icon}</span>
+                <span className="font-heading font-bold text-xs text-white group-hover:text-yellow-300 transition leading-tight">
+                  {t.label}
+                </span>
+                {isFeatured && (
+                  <span className="mt-1.5 text-[9px] font-extrabold uppercase bg-yellow-400 text-black px-1.5 py-0.5 rounded-full">
+                    Popular
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

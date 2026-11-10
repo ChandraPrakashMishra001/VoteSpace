@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { Suspense, useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { generateCode, generateCreatorToken, validatePoll, buildOptions, expiryTimestamp, POLL_TYPES } from "@/lib/polls";
 import { createPoll, saveMyPoll } from "@/lib/store";
 import type { PollType } from "@/lib/types";
+import Navbar from "@/components/Navbar";
 import { Plus, X, Check, ArrowLeft, ArrowRight, Rocket, Copy, Zap } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────
@@ -22,36 +24,6 @@ const STEPS = ["Topic", "Type", "Options", "Settings", "Share"];
 interface FormState {
   title: string; description: string; creatorName: string;
   type: PollType; options: string[]; timerHours: number;
-}
-
-// ─── Shared Navbar ────────────────────────────────────────────
-function Navbar() {
-  return (
-    <nav className="fixed inset-x-0 top-0 z-50 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
-      {/* IEEE VSSUT Banner */}
-      <div className="flex items-center justify-center gap-2 border-b border-yellow-400/10 py-1.5 px-4 bg-yellow-400/[0.06]">
-        <span className="text-sm">⚡</span>
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-300/80">
-          IEEE VSSUT Student Branch
-        </span>
-        <span className="text-sm">⚡</span>
-      </div>
-      {/* Main nav row */}
-      <div className="flex items-center justify-between px-6 py-3">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
-            <span className="text-lg">🗳️</span>
-          </div>
-          <span className="font-heading text-xl font-black tracking-tight">
-            Vote<span className="text-gradient">Space</span>
-          </span>
-        </Link>
-        <Link href="/" className="btn-ghost-yellow flex items-center gap-2 rounded-xl px-4 py-2 text-sm">
-          <ArrowLeft size={14} /> Back
-        </Link>
-      </div>
-    </nav>
-  );
 }
 
 // ─── Progress Indicator ───────────────────────────────────────
@@ -116,11 +88,29 @@ function Input({ label, optional, ...props }: React.InputHTMLAttributes<HTMLInpu
 // ─── Step 1 — Topic ───────────────────────────────────────────
 function StepTopic({ form, setForm, onNext }: { form: FormState; setForm: (f: FormState) => void; onNext: () => void }) {
   const [err, setErr] = useState("");
+  const selectedType = POLL_TYPES[form.type] || POLL_TYPES.single;
+
   return (
     <Card>
       <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-yellow-400/70">Step 1 of 4</p>
       <h2 className="mb-1 font-heading text-2xl font-black text-white">What's the topic?</h2>
-      <p className="mb-7 text-sm text-white/40">Give your poll a clear, punchy title.</p>
+      <p className="mb-5 text-sm text-white/40">Give your poll a clear, punchy title.</p>
+
+      {/* Selected Format Highlight */}
+      <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-yellow-400/25 bg-yellow-400/[0.07] p-3.5">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">{selectedType.icon}</span>
+          <div>
+            <p className="text-xs font-bold text-yellow-300">
+              Format: {selectedType.label}
+            </p>
+            <p className="text-[11px] text-white/50">{selectedType.desc}</p>
+          </div>
+        </div>
+        <span className="rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-1 text-[10px] font-semibold text-yellow-300">
+          Step 2 to change
+        </span>
+      </div>
 
       <div className="space-y-5">
         <div>
@@ -128,7 +118,11 @@ function StepTopic({ form, setForm, onNext }: { form: FormState; setForm: (f: Fo
             label="Poll Title"
             value={form.title}
             onChange={(e) => { setForm({ ...form, title: e.target.value }); setErr(""); }}
-            placeholder='e.g. "Best pizza topping for Friday night?"'
+            placeholder={
+              form.type === "participant"
+                ? 'e.g. "Vote for Best Performer / President of Club"'
+                : 'e.g. "Best pizza topping for Friday night?"'
+            }
             maxLength={200}
           />
           <div className="mt-1.5 flex justify-between">
@@ -143,7 +137,11 @@ function StepTopic({ form, setForm, onNext }: { form: FormState; setForm: (f: Fo
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Add context or rules for your voters…"
+            placeholder={
+              form.type === "participant"
+                ? "Describe the competition, rules, or details for your voters…"
+                : "Add context or rules for your voters…"
+            }
             maxLength={500}
             rows={3}
             className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white placeholder:text-white/20 resize-none transition focus:border-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/15"
@@ -407,8 +405,14 @@ function StepShare({ code }: { code: string }) {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────
-export default function CreatePage() {
+// ─── Inner Content ───────────────────────────────────────────
+function CreateContent() {
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type") as PollType | null;
+
+  const validTypes: PollType[] = ["single", "multiple", "ranked", "yesno", "participant"];
+  const initialType: PollType = (typeParam && validTypes.includes(typeParam)) ? typeParam : "single";
+
   const [step, setStep]         = useState(1);
   const [creating, setCreating] = useState(false);
   const [createdCode, setCode]  = useState<string | null>(null);
@@ -416,8 +420,15 @@ export default function CreatePage() {
 
   const [form, setForm] = useState<FormState>({
     title: "", description: "", creatorName: "",
-    type: "single", options: ["", ""], timerHours: 0,
+    type: initialType, options: ["", ""], timerHours: 0,
   });
+
+  // Update type if URL param changes
+  useEffect(() => {
+    if (typeParam && validTypes.includes(typeParam)) {
+      setForm((f) => ({ ...f, type: typeParam }));
+    }
+  }, [typeParam]);
 
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -462,7 +473,7 @@ export default function CreatePage() {
     <div className="relative min-h-screen">
       <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.15)_0%,transparent_60%)]" />
       <div ref={confettiRef} className="confetti-container" />
-      <Navbar />
+      <Navbar showBack backHref="/" />
 
       <main className="relative z-10 pt-36 pb-20 px-6">
         <div className="mb-10 text-center">
@@ -486,5 +497,21 @@ export default function CreatePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────
+export default function CreatePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen pt-40 flex flex-col items-center justify-center text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-yellow-400/20 border-t-yellow-400" />
+          <p className="mt-4 text-sm text-white/40">Loading poll creator…</p>
+        </div>
+      }
+    >
+      <CreateContent />
+    </Suspense>
   );
 }
