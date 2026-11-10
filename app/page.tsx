@@ -303,7 +303,7 @@ function MyPolls() {
 
 // ── Features ──────────────────────────────────────────────────
 const FEATURES = [
-  { icon: <Zap size={20} fill="currentColor" />,     title: "4 Poll Types",       desc: "Single · Multiple · Ranked · Yes/No" },
+  { icon: <Zap size={20} fill="currentColor" />,     title: "5 Poll Formats",     desc: "Participant · Single · Multiple · Ranked · Yes/No" },
   { icon: <Link2 size={20} />,                        title: "Instant Share",      desc: "6-char code or direct link. Zero accounts." },
   { icon: <Users size={20} />,                        title: "Named or Anonymous", desc: "Each voter decides how they appear." },
   { icon: <BarChart3 size={20} />,                    title: "Live Results",       desc: "Real-time charts the moment polls close." },

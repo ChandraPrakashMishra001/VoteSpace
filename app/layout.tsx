@@ -5,8 +5,8 @@ import { BackgroundEffect } from "./background";
 export const metadata: Metadata = {
   title: "VoteSpace — Vote on Anything with Friends",
   description:
-    "Create polls on any topic, share a 6-char code with friends, and reveal live results together. Single, multiple, ranked, or yes/no.",
-  keywords: ["voting", "polls", "friends", "vote", "decision"],
+    "Create polls on any topic, share a 6-char code with friends, and reveal live results together. Participant, single, multiple, ranked, or yes/no.",
+  keywords: ["voting", "polls", "friends", "vote", "decision", "ieee", "vssut"],
 };
 
 export default function RootLayout({
