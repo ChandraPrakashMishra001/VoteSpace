@@ -27,18 +27,29 @@ interface FormState {
 // ─── Shared Navbar ────────────────────────────────────────────
 function Navbar() {
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
-      <Link href="/" className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
-          <span className="text-lg">🗳️</span>
-        </div>
-        <span className="font-heading text-xl font-black tracking-tight">
-          Vote<span className="text-gradient">Space</span>
+    <nav className="fixed inset-x-0 top-0 z-50 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
+      {/* IEEE VSSUT Banner */}
+      <div className="flex items-center justify-center gap-2 border-b border-yellow-400/10 py-1.5 px-4 bg-yellow-400/[0.06]">
+        <span className="text-sm">⚡</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-300/80">
+          IEEE VSSUT Student Branch
         </span>
-      </Link>
-      <Link href="/" className="btn-ghost-yellow flex items-center gap-2 rounded-xl px-4 py-2 text-sm">
-        <ArrowLeft size={14} /> Back
-      </Link>
+        <span className="text-sm">⚡</span>
+      </div>
+      {/* Main nav row */}
+      <div className="flex items-center justify-between px-6 py-3">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
+            <span className="text-lg">🗳️</span>
+          </div>
+          <span className="font-heading text-xl font-black tracking-tight">
+            Vote<span className="text-gradient">Space</span>
+          </span>
+        </Link>
+        <Link href="/" className="btn-ghost-yellow flex items-center gap-2 rounded-xl px-4 py-2 text-sm">
+          <ArrowLeft size={14} /> Back
+        </Link>
+      </div>
     </nav>
   );
 }
@@ -233,9 +244,9 @@ function StepOptions({ form, setForm, onBack, onNext }: { form: FormState; setFo
   return (
     <Card>
       <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-yellow-400/70">Step 3 of 4</p>
-      <h2 className="mb-1 font-heading text-2xl font-black text-white">Add options</h2>
+      <h2 className="mb-1 font-heading text-2xl font-black text-white">{form.type === "participant" ? "Add participants / groups" : "Add options"}</h2>
       <p className="mb-7 text-sm text-white/40">
-        {form.type === "ranked" ? "Voters will drag these into their preferred order." : "Add the choices your crew picks from."}
+        {form.type === "ranked" ? "Voters will drag these into their preferred order." : form.type === "participant" ? "Add the participants or groups voters will choose from." : "Add the choices your crew picks from."}
       </p>
 
       <div className="space-y-2.5">
@@ -245,7 +256,7 @@ function StepOptions({ form, setForm, onBack, onNext }: { form: FormState; setFo
             <input
               value={opt}
               onChange={(e) => setOpt(i, e.target.value)}
-              placeholder={`Option ${i + 1}`}
+              placeholder={form.type === "participant" ? `Participant / Group ${i + 1}` : `Option ${i + 1}`}
               maxLength={120}
               className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 transition focus:border-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/15"
             />
@@ -265,7 +276,7 @@ function StepOptions({ form, setForm, onBack, onNext }: { form: FormState; setFo
           onClick={addOpt}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-yellow-400/15 px-4 py-2.5 text-sm font-medium text-white/35 transition hover:border-yellow-400/35 hover:text-yellow-400/70"
         >
-          <Plus size={14} /> Add another option
+          <Plus size={14} /> {form.type === "participant" ? "Add another participant / group" : "Add another option"}
         </button>
       )}
 
@@ -453,7 +464,7 @@ export default function CreatePage() {
       <div ref={confettiRef} className="confetti-container" />
       <Navbar />
 
-      <main className="relative z-10 pt-28 pb-20 px-6">
+      <main className="relative z-10 pt-36 pb-20 px-6">
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-widest text-yellow-400/80 mb-4">
             <Zap size={11} fill="currentColor" /> New Poll

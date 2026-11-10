@@ -12,18 +12,27 @@ import { ArrowLeft, Check, GripVertical, ChevronUp, ChevronDown, Zap, Plus } fro
 // ─── Navbar ───────────────────────────────────────────────────
 function Navbar() {
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
-      <Link href="/" className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
-          <span className="text-lg">🗳️</span>
-        </div>
-        <span className="font-heading text-xl font-black tracking-tight">
-          Vote<span className="text-gradient">Space</span>
+    <nav className="fixed inset-x-0 top-0 z-50 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
+      <div className="flex items-center justify-center gap-2 border-b border-yellow-400/10 py-1.5 px-4 bg-yellow-400/[0.06]">
+        <span className="text-sm">⚡</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-300/80">
+          IEEE VSSUT Student Branch
         </span>
-      </Link>
-      <Link href="/create" className="btn-yellow flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">
-        <Plus size={14} strokeWidth={2.5} /> New Poll
-      </Link>
+        <span className="text-sm">⚡</span>
+      </div>
+      <div className="flex items-center justify-between px-6 py-3">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
+            <span className="text-lg">🗳️</span>
+          </div>
+          <span className="font-heading text-xl font-black tracking-tight">
+            Vote<span className="text-gradient">Space</span>
+          </span>
+        </Link>
+        <Link href="/create" className="btn-yellow flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm">
+          <Plus size={14} strokeWidth={2.5} /> New Poll
+        </Link>
+      </div>
     </nav>
   );
 }
@@ -218,7 +227,7 @@ function VoteForm({ poll, code }: { poll: Poll; code: string }) {
   }, [poll.expiresAt]);
 
   const toggleOption = useCallback((id: string) => {
-    if (poll.type === "single" || poll.type === "yesno") { setSelected([id]); }
+    if (poll.type === "single" || poll.type === "yesno" || poll.type === "participant") { setSelected([id]); }
     else { setSelected((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]); }
   }, [poll.type]);
 
@@ -287,9 +296,10 @@ function VoteForm({ poll, code }: { poll: Poll; code: string }) {
         {/* Options */}
         <div className="mb-7">
           <label className="mb-3 block text-[10px] font-bold uppercase tracking-[0.15em] text-white/35">
-            {poll.type === "multiple" ? "Select all that apply" : poll.type === "ranked" ? "Drag into your preferred order" : "Pick one"}
+            {poll.type === "multiple" ? "Select all that apply" : poll.type === "ranked" ? "Drag into your preferred order" : poll.type === "participant" ? "Vote for your favourite participant / group" : "Pick one"}
           </label>
           {(poll.type === "single" || poll.type === "multiple") && <OptionList options={poll.options} selected={selected} type={poll.type} onToggle={toggleOption} />}
+          {poll.type === "participant" && <OptionList options={poll.options} selected={selected} type="single" onToggle={toggleOption} />}
           {poll.type === "yesno"   && <YesNoList selected={selected} onSelect={toggleOption} />}
           {poll.type === "ranked"  && <RankedList options={poll.options} order={rankOrder} setOrder={setRankOrder} />}
         </div>
@@ -349,7 +359,7 @@ export default function VotePage() {
     <div className="relative min-h-screen">
       <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.12)_0%,transparent_60%)]" />
       <Navbar />
-      <main className="relative z-10 pt-28 pb-20 px-6">
+      <main className="relative z-10 pt-36 pb-20 px-6">
         <Suspense fallback={<LoadingView />}>
           <VoteInner />
         </Suspense>

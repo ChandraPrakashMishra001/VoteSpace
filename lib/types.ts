@@ -5,7 +5,7 @@
 
 import type { Timestamp } from "firebase/firestore";
 
-export type PollType = "single" | "multiple" | "ranked" | "yesno";
+export type PollType = "single" | "multiple" | "ranked" | "yesno" | "participant";
 export type PollStatus = "active" | "closed";
 
 export interface PollOption {

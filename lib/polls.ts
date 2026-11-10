@@ -7,10 +7,11 @@ import type { PollOption, PollType, Poll } from "./types";
 import type { Timestamp } from "firebase/firestore";
 
 export const POLL_TYPES: Record<PollType, { label: string; icon: string; desc: string }> = {
-  single:   { label: "Single Choice",   icon: "⚡", desc: "Pick exactly one option" },
-  multiple: { label: "Multiple Choice", icon: "☑️",  desc: "Select all that apply" },
-  ranked:   { label: "Ranked Order",    icon: "🏆", desc: "Drag to rank by preference" },
-  yesno:    { label: "Yes / No",        icon: "👍", desc: "Classic binary decision" },
+  single:      { label: "Single Choice",   icon: "⚡",  desc: "Pick exactly one option" },
+  multiple:    { label: "Multiple Choice", icon: "☑️",   desc: "Select all that apply" },
+  ranked:      { label: "Ranked Order",    icon: "🏆",  desc: "Drag to rank by preference" },
+  yesno:       { label: "Yes / No",        icon: "👍",  desc: "Classic binary decision" },
+  participant: { label: "Participant Vote", icon: "🧑‍🤝‍🧑", desc: "Vote for a person or group" },
 };
 
 export function generateCode(): string {

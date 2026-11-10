@@ -11,21 +11,32 @@ import { Zap, BarChart3, Link2, Users, Plus, ArrowRight, Trash2 } from "lucide-r
 // ── Navbar ────────────────────────────────────────────────────
 function Navbar() {
   return (
-    <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
-      <Link href="/" className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
-          <span className="text-lg">🗳️</span>
-        </div>
-        <span className="font-heading text-xl font-black tracking-tight">
-          Vote<span className="text-gradient">Space</span>
+    <nav className="fixed top-0 inset-x-0 z-50 backdrop-blur-2xl bg-black/50 border-b border-yellow-400/10">
+      {/* IEEE VSSUT Banner */}
+      <div className="flex items-center justify-center gap-2 border-b border-yellow-400/10 py-1.5 px-4 bg-yellow-400/[0.06]">
+        <span className="text-sm">⚡</span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-300/80">
+          IEEE VSSUT Student Branch
         </span>
-      </Link>
-      <Link
-        href="/create"
-        className="btn-yellow flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm"
-      >
-        <Plus size={15} strokeWidth={2.5} /> Create Poll
-      </Link>
+        <span className="text-sm">⚡</span>
+      </div>
+      {/* Main nav row */}
+      <div className="flex items-center justify-between px-6 py-3">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/15 border border-yellow-400/25">
+            <span className="text-lg">🗳️</span>
+          </div>
+          <span className="font-heading text-xl font-black tracking-tight">
+            Vote<span className="text-gradient">Space</span>
+          </span>
+        </Link>
+        <Link
+          href="/create"
+          className="btn-yellow flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm"
+        >
+          <Plus size={15} strokeWidth={2.5} /> Create Poll
+        </Link>
+      </div>
     </nav>
   );
 }
@@ -42,7 +53,7 @@ function Hero() {
   }, [code, router]);
 
   return (
-    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pb-16 pt-28 text-center">
+    <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pb-16 pt-36 text-center">
 
       {/* Floating badge */}
       <div
@@ -330,10 +341,17 @@ export default function HomePage() {
       <Features />
 
       <footer className="relative z-10 border-t border-yellow-400/[0.07] bg-black/70 py-8 text-center text-sm text-white/25">
-        Made with ⚡ · VoteSpace ·{" "}
-        <Link href="/create" className="text-yellow-400/70 underline-offset-4 hover:text-yellow-400 hover:underline transition">
-          Start a poll
-        </Link>
+        <p>
+          Made with ⚡ · VoteSpace ·{" "}
+          <Link href="/create" className="text-yellow-400/70 underline-offset-4 hover:text-yellow-400 hover:underline transition">
+            Start a poll
+          </Link>
+        </p>
+        <p className="mt-2 text-[12px] text-white/20">
+          Made by{" "}
+          <span className="text-yellow-400/50 font-semibold">Chandra Prakash Mishra</span>
+          {" "}· IEEE VSSUT Student Branch
+        </p>
       </footer>
     </div>
   );
