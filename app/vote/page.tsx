@@ -83,26 +83,30 @@ function SuccessView({ code, voterName }: { code: string; voterName: string }) {
   );
 }
 
-// ─── Single / Multiple Options ────────────────────────────────
+// ─── Single / Multiple / Participant Options ──────────────────
 function OptionList({ options, selected, type, onToggle }: {
   options: PollOption[]; selected: string[];
   type: "single" | "multiple"; onToggle: (id: string) => void;
 }) {
+  const hasImages = options.some((o) => !!o.imageUrl);
+
   return (
-    <div className="space-y-2.5">
+    <div className={cn("space-y-3", hasImages && "grid grid-cols-1 sm:grid-cols-2 gap-3 space-y-0")}>
       {options.map((opt) => {
         const active = selected.includes(opt.id);
         return (
           <button
             key={opt.id}
+            type="button"
             onClick={() => onToggle(opt.id)}
             className={cn(
-              "group flex w-full items-center gap-4 rounded-xl border-2 px-5 py-4 text-left transition-all duration-200",
+              "group relative flex w-full items-center gap-3.5 rounded-2xl border-2 p-3.5 text-left transition-all duration-200",
               active
-                ? "option-active border-yellow-400/60"
-                : "border-white/[0.08] bg-white/[0.02] hover:border-yellow-400/25 hover:bg-yellow-400/[0.03] hover:translate-x-1"
+                ? "option-active border-yellow-400/80 bg-yellow-400/[0.08] shadow-[0_0_24px_rgba(250,204,21,0.18)]"
+                : "border-white/[0.08] bg-white/[0.02] hover:border-yellow-400/30 hover:bg-yellow-400/[0.04]"
             )}
           >
+            {/* Radio / Check indicator */}
             <div className={cn(
               "flex h-5 w-5 shrink-0 items-center justify-center border-2 transition-all",
               type === "multiple" ? "rounded-md" : "rounded-full",
@@ -110,7 +114,27 @@ function OptionList({ options, selected, type, onToggle }: {
             )}>
               {active && <Check size={10} strokeWidth={3} className="text-black" />}
             </div>
-            <span className={cn("font-medium text-sm", active ? "text-white" : "text-white/75")}>{opt.text}</span>
+
+            {/* Photo preview */}
+            {opt.imageUrl && (
+              <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <img
+                  src={opt.imageUrl}
+                  alt={opt.text}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            )}
+
+            {/* Text / Name */}
+            <div className="min-w-0 flex-1">
+              <span className={cn(
+                "font-heading font-bold text-sm block leading-snug break-words",
+                active ? "text-yellow-300" : "text-white/90 group-hover:text-white"
+              )}>
+                {opt.text}
+              </span>
+            </div>
           </button>
         );
       })}
@@ -172,6 +196,13 @@ function RankedList({ options, order, setOrder }: { options: PollOption[]; order
         >
           <span className="font-mono-code w-7 text-center text-xs font-black text-yellow-400">#{i + 1}</span>
           <GripVertical size={15} className="text-white/20 shrink-0" />
+          {opt.imageUrl && (
+            <img
+              src={opt.imageUrl}
+              alt={opt.text}
+              className="h-10 w-10 rounded-lg object-cover border border-white/10 shrink-0"
+            />
+          )}
           <span className="flex-1 text-sm font-medium text-white/85">{opt.text}</span>
           <div className="flex flex-col gap-1">
             <button onClick={() => i > 0 && move(i, i - 1)} disabled={i === 0} className="rounded-lg bg-white/5 p-1 text-white/35 hover:text-yellow-400 disabled:opacity-20 transition"><ChevronUp size={12} /></button>
@@ -236,6 +267,11 @@ function VoteForm({ poll, code }: { poll: Poll; code: string }) {
 
         {/* Header */}
         <div className="mb-7 border-b border-white/[0.06] pb-7">
+          {poll.imageUrl && (
+            <div className="relative mb-5 overflow-hidden rounded-2xl border border-yellow-400/20 max-h-56">
+              <img src={poll.imageUrl} alt={poll.title} className="w-full h-full max-h-56 object-cover" />
+            </div>
+          )}
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="rounded-lg border border-yellow-400/25 bg-yellow-400/[0.08] px-3 py-1 text-xs font-bold text-yellow-300">
               {typeInfo.icon} {typeInfo.label}

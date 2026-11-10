@@ -11,6 +11,7 @@ export type PollStatus = "active" | "closed";
 export interface PollOption {
   id: string;
   text: string;
+  imageUrl?: string;
 }
 
 export interface Poll {
@@ -18,6 +19,7 @@ export interface Poll {
   code: string;
   title: string;
   description?: string;
+  imageUrl?: string;
   creatorName: string;
   creatorToken: string;
   type: PollType;

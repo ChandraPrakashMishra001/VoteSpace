@@ -120,6 +120,13 @@ function ResultBar({ item, isWinner, isFirst, type }: { item: ResultItem; isWinn
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           {isFirst && isWinner && <span className="crown-anim shrink-0 text-lg">👑</span>}
+          {item.option.imageUrl && (
+            <img
+              src={item.option.imageUrl}
+              alt={item.option.text}
+              className="h-9 w-9 shrink-0 rounded-lg object-cover border border-white/10"
+            />
+          )}
           <span className={cn("font-semibold truncate text-sm", isFirst && isWinner ? "text-white" : "text-white/80")}>{item.option.text}</span>
           {isFirst && isWinner && (
             <span className="shrink-0 rounded-lg border border-yellow-400/35 bg-yellow-400/12 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-yellow-400">
@@ -191,6 +198,11 @@ function ResultsView({ poll, votes, isCreator, onClose, onDelete }: { poll: Poll
 
         {/* Header */}
         <div className="mb-8 border-b border-white/[0.06] pb-8">
+          {poll.imageUrl && (
+            <div className="relative mb-5 overflow-hidden rounded-2xl border border-yellow-400/20 max-h-56">
+              <img src={poll.imageUrl} alt={poll.title} className="w-full h-full max-h-56 object-cover" />
+            </div>
+          )}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className={cn("rounded-lg px-3 py-1 text-[11px] font-black uppercase tracking-wider",
               closed ? "bg-white/8 text-white/40" : "bg-yellow-400/15 text-yellow-400"
@@ -223,12 +235,25 @@ function ResultsView({ poll, votes, isCreator, onClose, onDelete }: { poll: Poll
 
         {/* Winner callout */}
         {winner && (
-          <div className="mb-6 flex items-center gap-4 rounded-xl border border-yellow-400/25 bg-yellow-400/[0.07] px-5 py-4"
+          <div className="mb-6 flex items-center gap-4 rounded-2xl border border-yellow-400/30 bg-yellow-400/[0.08] p-4 sm:p-5"
             style={{ animation: "pulse-glow-yellow 3s ease-in-out infinite" }}>
-            <Trophy size={22} className="shrink-0 text-yellow-400" />
-            <div>
+            {winner.option.imageUrl ? (
+              <img
+                src={winner.option.imageUrl}
+                alt={winner.option.text}
+                className="h-14 w-14 sm:h-16 sm:w-16 rounded-xl object-cover border border-yellow-400/40 shrink-0 shadow-lg"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-400/15 text-yellow-400 shrink-0">
+                <Trophy size={24} />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400/70 mb-0.5">🏆 Winner</p>
-              <p className="font-heading text-lg font-black text-white">{winner.option.text}</p>
+              <p className="font-heading text-lg sm:text-xl font-black text-white truncate">{winner.option.text}</p>
+              <p className="text-xs text-white/45 mt-0.5">
+                {winner.votes} votes ({winner.percentage}%)
+              </p>
             </div>
           </div>
         )}

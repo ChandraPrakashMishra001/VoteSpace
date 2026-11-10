@@ -29,12 +29,23 @@ import type { Poll, Vote, MyPollEntry } from "./types";
 // ============================================================
 
 export async function createPoll(data: Omit<Poll, "id" | "createdAt" | "totalVotes" | "status">): Promise<Poll> {
-  const ref = await addDoc(collection(db, "polls"), {
-    ...data,
+  const payload: Record<string, any> = {
+    code: data.code,
+    title: data.title,
+    creatorName: data.creatorName,
+    creatorToken: data.creatorToken,
+    type: data.type,
+    options: data.options,
     status: "active",
     totalVotes: 0,
     createdAt: serverTimestamp(),
-  });
+  };
+
+  if (data.description) payload.description = data.description;
+  if (data.imageUrl) payload.imageUrl = data.imageUrl;
+  if (data.expiresAt) payload.expiresAt = data.expiresAt;
+
+  const ref = await addDoc(collection(db, "polls"), payload);
   return { ...data, id: ref.id, status: "active", totalVotes: 0, createdAt: null };
 }
 

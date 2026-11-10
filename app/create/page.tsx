@@ -8,7 +8,8 @@ import { generateCode, generateCreatorToken, validatePoll, buildOptions, expiryT
 import { createPoll, saveMyPoll } from "@/lib/store";
 import type { PollType } from "@/lib/types";
 import Navbar from "@/components/Navbar";
-import { Plus, X, Check, ArrowLeft, ArrowRight, Rocket, Copy, Zap } from "lucide-react";
+import { Plus, X, Check, ArrowLeft, ArrowRight, Rocket, Copy, Zap, ImagePlus, Camera } from "lucide-react";
+import { compressImage } from "@/lib/image";
 
 // ─── Constants ────────────────────────────────────────────────
 const TIMERS = [
@@ -21,9 +22,19 @@ const TIMERS = [
 ];
 const STEPS = ["Topic", "Type", "Options", "Settings", "Share"];
 
+export interface FormOption {
+  text: string;
+  imageUrl?: string;
+}
+
 interface FormState {
-  title: string; description: string; creatorName: string;
-  type: PollType; options: string[]; timerHours: number;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  creatorName: string;
+  type: PollType;
+  options: FormOption[];
+  timerHours: number;
 }
 
 // ─── Progress Indicator ───────────────────────────────────────
@@ -147,6 +158,48 @@ function StepTopic({ form, setForm, onNext }: { form: FormState; setForm: (f: Fo
             className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white placeholder:text-white/20 resize-none transition focus:border-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/15"
           />
         </div>
+
+        {/* Poll Banner / Topic Photo */}
+        <div>
+          <label className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">
+            <span>Poll Banner / Photo</span>
+            <span className="font-normal normal-case tracking-normal text-white/20">optional</span>
+          </label>
+          {form.imageUrl ? (
+            <div className="relative rounded-2xl overflow-hidden border border-yellow-400/30">
+              <img src={form.imageUrl} alt="Poll Banner" className="w-full h-40 object-cover" />
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, imageUrl: undefined })}
+                className="absolute top-2 right-2 rounded-xl bg-black/75 border border-white/20 p-1.5 text-xs text-white hover:bg-red-600 transition"
+                title="Remove photo"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <label className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3 text-xs text-white/50 hover:border-yellow-400/40 hover:bg-yellow-400/[0.05] hover:text-yellow-300 transition cursor-pointer">
+              <ImagePlus size={18} className="text-yellow-400/70 shrink-0" />
+              <span>Upload a banner or topic photo for this poll</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const compressed = await compressImage(file, 800, 600, 0.75);
+                    setForm({ ...form, imageUrl: compressed });
+                  } catch (err) {
+                    alert((err as Error).message);
+                  }
+                }}
+              />
+            </label>
+          )}
+        </div>
+
         <Input
           label="Your name"
           optional
@@ -214,10 +267,29 @@ function StepType({ form, setForm, onBack, onNext }: { form: FormState; setForm:
 // ─── Step 3 — Options ─────────────────────────────────────────
 function StepOptions({ form, setForm, onBack, onNext }: { form: FormState; setForm: (f: FormState) => void; onBack: () => void; onNext: () => void }) {
   const [err, setErr] = useState("");
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
 
-  const setOpt = (i: number, val: string) => { const o = [...form.options]; o[i] = val; setForm({ ...form, options: o }); };
-  const addOpt = () => { if (form.options.length >= 10) return; setForm({ ...form, options: [...form.options, ""] }); };
-  const removeOpt = (i: number) => { if (form.options.length <= 2) return; setForm({ ...form, options: form.options.filter((_, idx) => idx !== i) }); };
+  const setOptText = (i: number, val: string) => {
+    const o = [...form.options];
+    o[i] = { ...o[i], text: val };
+    setForm({ ...form, options: o });
+  };
+
+  const setOptImage = (i: number, img: string | undefined) => {
+    const o = [...form.options];
+    o[i] = { ...o[i], imageUrl: img };
+    setForm({ ...form, options: o });
+  };
+
+  const addOpt = () => {
+    if (form.options.length >= 10) return;
+    setForm({ ...form, options: [...form.options, { text: "", imageUrl: undefined }] });
+  };
+
+  const removeOpt = (i: number) => {
+    if (form.options.length <= 2) return;
+    setForm({ ...form, options: form.options.filter((_, idx) => idx !== i) });
+  };
 
   if (form.type === "yesno") return (
     <Card>
@@ -243,21 +315,80 @@ function StepOptions({ form, setForm, onBack, onNext }: { form: FormState; setFo
     <Card>
       <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-yellow-400/70">Step 3 of 4</p>
       <h2 className="mb-1 font-heading text-2xl font-black text-white">{form.type === "participant" ? "Add participants / groups" : "Add options"}</h2>
-      <p className="mb-7 text-sm text-white/40">
+      <p className="mb-4 text-sm text-white/40">
         {form.type === "ranked" ? "Voters will drag these into their preferred order." : form.type === "participant" ? "Add the participants or groups voters will choose from." : "Add the choices your crew picks from."}
       </p>
 
-      <div className="space-y-2.5">
+      {/* Photo Upload Tip */}
+      <div className="mb-5 flex items-center gap-2 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.06] px-3.5 py-2.5 text-xs text-yellow-300/80">
+        <Camera size={14} className="shrink-0 text-yellow-400" />
+        <span>You can upload a photo for each option or participant using the 📷 button.</span>
+      </div>
+
+      <div className="space-y-3">
         {form.options.map((opt, i) => (
           <div key={i} className="flex items-center gap-2.5">
             <span className="w-6 shrink-0 text-center text-xs font-bold text-yellow-400/60">{i + 1}</span>
+
+            {/* Photo Upload / Thumbnail Button */}
+            <div className="relative shrink-0">
+              {opt.imageUrl ? (
+                <div className="relative group">
+                  <img
+                    src={opt.imageUrl}
+                    alt={`Option ${i + 1}`}
+                    className="h-10 w-10 rounded-xl object-cover border border-yellow-400/40 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setOptImage(i, undefined)}
+                    className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white hover:bg-red-500 shadow-md"
+                    title="Remove photo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className={cn(
+                    "flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-dashed transition",
+                    uploadingIdx === i
+                      ? "border-yellow-400 bg-yellow-400/10 text-yellow-300"
+                      : "border-white/20 bg-white/[0.03] text-white/40 hover:border-yellow-400/50 hover:bg-yellow-400/[0.08] hover:text-yellow-300"
+                  )}
+                  title="Upload photo for this choice"
+                >
+                  <ImagePlus size={16} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingIdx(i);
+                      try {
+                        const compressed = await compressImage(file, 500, 500, 0.75);
+                        setOptImage(i, compressed);
+                      } catch (err) {
+                        alert((err as Error).message);
+                      } finally {
+                        setUploadingIdx(null);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
             <input
-              value={opt}
-              onChange={(e) => setOpt(i, e.target.value)}
-              placeholder={form.type === "participant" ? `Participant / Group ${i + 1}` : `Option ${i + 1}`}
+              value={opt.text}
+              onChange={(e) => setOptText(i, e.target.value)}
+              placeholder={form.type === "participant" ? `Participant / Group ${i + 1} name` : `Option ${i + 1}`}
               maxLength={120}
-              className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 transition focus:border-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/15"
+              className="flex-1 min-w-0 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder:text-white/20 transition focus:border-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/15"
             />
+
             <button
               onClick={() => removeOpt(i)}
               disabled={form.options.length <= 2}
@@ -419,8 +550,10 @@ function CreateContent() {
   const confettiRef = useRef<HTMLDivElement>(null);
 
   const [form, setForm] = useState<FormState>({
-    title: "", description: "", creatorName: "",
-    type: initialType, options: ["", ""], timerHours: 0,
+    title: "", description: "", imageUrl: undefined, creatorName: "",
+    type: initialType,
+    options: [{ text: "", imageUrl: undefined }, { text: "", imageUrl: undefined }],
+    timerHours: 0,
   });
 
   // Update type if URL param changes
@@ -454,9 +587,14 @@ function CreateContent() {
       const creatorToken = generateCreatorToken();
       const expiresAt    = expiryTimestamp(form.timerHours);
       const poll = await createPoll({
-        code, title: form.title, description: form.description,
+        code,
+        title: form.title,
+        description: form.description,
+        imageUrl: form.imageUrl,
         creatorName: form.creatorName || "Anonymous",
-        creatorToken, type: form.type, options,
+        creatorToken,
+        type: form.type,
+        options,
         expiresAt: expiresAt ?? null,
       });
       saveMyPoll(poll, creatorToken);

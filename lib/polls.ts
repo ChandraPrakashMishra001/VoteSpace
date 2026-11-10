@@ -27,19 +27,23 @@ export function generateCreatorToken(): string {
   return "ct_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
 }
 
-export function validatePoll(data: { title: string; type: PollType; options: string[] }): string[] {
+export type OptionInput = string | { text: string; imageUrl?: string };
+
+export function validatePoll(data: { title: string; type: PollType; options: OptionInput[] }): string[] {
   const errors: string[] = [];
   if (!data.title.trim())          errors.push("Poll title is required.");
   if (data.title.trim().length > 200) errors.push("Title must be 200 chars or fewer.");
   if (data.type !== "yesno") {
-    const filled = data.options.filter((o) => o.trim());
+    const filled = data.options.filter((o) =>
+      typeof o === "string" ? o.trim() : (o.text.trim() || o.imageUrl)
+    );
     if (filled.length < 2)  errors.push("Add at least 2 options.");
     if (filled.length > 10) errors.push("Maximum 10 options allowed.");
   }
   return errors;
 }
 
-export function buildOptions(type: PollType, rawOptions: string[]): PollOption[] {
+export function buildOptions(type: PollType, rawOptions: OptionInput[]): PollOption[] {
   if (type === "yesno") {
     return [
       { id: "yes", text: "👍  Yes" },
@@ -47,8 +51,13 @@ export function buildOptions(type: PollType, rawOptions: string[]): PollOption[]
     ];
   }
   return rawOptions
-    .filter((o) => o.trim())
-    .map((text) => ({ id: generateId(), text: text.trim() }));
+    .map((item) => (typeof item === "string" ? { text: item.trim(), imageUrl: undefined } : { text: item.text.trim(), imageUrl: item.imageUrl }))
+    .filter((o) => o.text || o.imageUrl)
+    .map((o) => ({
+      id: generateId(),
+      text: o.text || "Option",
+      ...(o.imageUrl ? { imageUrl: o.imageUrl } : {}),
+    }));
 }
 
 export function isExpired(poll: Poll): boolean {
